@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>นัดโทร · ON AIR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Firebase (ใช้เมื่อดาวน์โหลดไฟล์ไปโฮสต์เอง เพื่อให้ทุกคนเห็นนัดเดียวกันไม่ว่าเปิดจากเครื่องไหน) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#0a0a14;
+    --panel:#12121f;
+    --panel-2:#181828;
+    --pink:#ff3cac;
+    --cyan:#00f0ff;
+    --violet:#7b2ff7;
+    --gold:#ffd23f;
+    --text:#f2f0ff;
+    --muted:#8b8aa8;
+    --line:#26263c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(123,47,247,0.25), transparent 60%),
+      radial-gradient(1000px 500px at 85% 110%, rgba(0,240,255,0.15), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .stage{
+    width:100%;
+    max-width:460px;
+  }
+  .card{
+    position:relative;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:32px 28px 28px;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .card::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:28px;
+  }
+  .onair{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    color:var(--muted);
+    transition:all .4s ease;
+  }
+  .onair .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--muted);
+    transition:all .4s ease;
+  }
+  .onair.live{
+    color:var(--gold);
+    border-color:rgba(255,210,63,0.4);
+    box-shadow:0 0 18px rgba(255,210,63,0.25);
+  }
+  .onair.live .dot{
+    background:var(--gold);
+    box-shadow:0 0 10px var(--gold);
+    animation:blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink{50%{opacity:0.25;}}
+
+  .gear{
+    width:34px;height:34px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .gear:hover{color:var(--text);border-color:var(--cyan);}
+
+  .radar{
+    position:relative;
+    width:120px;height:120px;
+    margin:4px auto 18px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ring{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    border:1px solid var(--cyan);
+    opacity:0;
+    animation:pulse 3s ease-out infinite;
+  }
+  .ring:nth-child(2){animation-delay:1s;}
+  .ring:nth-child(3){animation-delay:2s;}
+  @keyframes pulse{
+    0%{transform:scale(0.35);opacity:0.55;}
+    100%{transform:scale(1);opacity:0;}
+  }
+  .icon-core{
+    position:relative;
+    width:64px;height:64px;
+    border-radius:50%;
+    background:linear-gradient(145deg, var(--violet), var(--pink));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 40px rgba(255,60,172,0.45);
+  }
+  .icon-core svg{width:28px;height:28px;color:#fff;}
+
+  .headline{text-align:center;margin-bottom:4px;}
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .title{
+    font-size:22px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:14px;
+    margin-bottom:22px;
+  }
+
+  .clock{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:24px;
+  }
+  .clock .seg{
+    background:rgba(0,0,0,0.35);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 6px;
+    min-width:58px;
+    text-align:center;
+  }
+  .clock .num{
+    font-family:'Orbitron', sans-serif;
+    font-size:22px;
+    font-weight:700;
+    color:var(--cyan);
+    text-shadow:0 0 12px rgba(0,240,255,0.5);
+  }
+  .clock .lab{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:0.08em;
+    margin-top:2px;
+  }
+
+  .join{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(90deg, var(--pink), var(--violet));
+    color:#fff;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+    box-shadow:0 10px 30px rgba(123,47,247,0.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .join:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(123,47,247,0.5);}
+  .join:active{transform:translateY(0);}
+  .join.disabled{
+    background:var(--panel-2);
+    color:var(--muted);
+    box-shadow:none;
+    cursor:not-allowed;
+    pointer-events:none;
+    border:1px dashed var(--line);
+  }
+
+  .empty{
+    text-align:center;
+    padding:30px 10px 10px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  /* Upcoming list under the featured card */
+  .upcoming{
+    margin-top:24px;
+    padding-top:18px;
+    border-top:1px solid var(--line);
+  }
+  .upcoming-title{
+    font-family:'Orbitron', sans-serif;
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  .upcoming-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+  .upcoming-item .info{min-width:0;}
+  .upcoming-item .plat{font-size:13.5px;font-weight:700;}
+  .upcoming-item .when{font-size:12px;color:var(--muted);margin-top:2px;}
+  .upcoming-item .acts{display:flex;gap:6px;flex-shrink:0;}
+  .icon-btn{
+    width:28px;height:28px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:hover{color:var(--text);border-color:var(--cyan);}
+  .icon-btn.danger:hover{color:var(--pink);border-color:rgba(255,60,172,0.4);}
+
+  /* Overlays */
+  .edit-overlay{
+    position:fixed;inset:0;
+    background:rgba(5,5,10,0.72);
+    backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    z-index:20;
+  }
+  .edit-panel{
+    width:100%;max-width:400px;
+    max-height:88vh;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:26px;
+  }
+  .edit-panel h2{
+    font-size:16px;
+    margin:0 0 4px;
+    font-family:'Orbitron', sans-serif;
+    letter-spacing:0.04em;
+  }
+  .edit-panel .hint{
+    color:var(--muted);
+    font-size:12.5px;
+    margin-bottom:20px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:11px 12px;
+    background:rgba(0,0,0,0.3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--cyan);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .btnrow{display:flex;gap:10px;margin-top:22px;}
+  .btn{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--text);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .btn.primary{
+    border:none;
+    background:linear-gradient(90deg, var(--cyan), var(--violet));
+    color:#0a0a14;
+  }
+  .btn.danger{color:var(--pink);border-color:rgba(255,60,172,0.3);}
+
+  .manage-list{margin-top:6px;}
+  .manage-empty{
+    text-align:center;color:var(--muted);font-size:13px;
+    padding:20px 10px;
+  }
+  .add-new-btn{
+    width:100%;
+    margin-top:14px;
+    padding:13px;
+    border-radius:12px;
+    border:1px dashed var(--line);
+    background:transparent;
+    color:var(--cyan);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .add-new-btn:hover{border-color:var(--cyan);}
+
+  .shared-note{
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    margin-top:16px;
+    opacity:0.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="card">
+    <div class="topbar">
+      <div class="onair" id="onairBadge"><span class="dot"></span><span id="onairText">STANDBY</span></div>
+      <button class="gear" id="editBtn" title="จัดการนัด" aria-label="จัดการนัด">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.36.4.66.73.86.3.18.65.28 1 .28H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <div id="mainContent"></div>
+    <div id="upcomingBox"></div>
+
+    <div class="shared-note" id="sharedNote">จองนัดหรือแก้ไขนัด ติดต่อ Admin</div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:#1c1c30;border:1px solid var(--line);color:var(--text);padding:12px 18px;
+  border-radius:12px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:50;max-width:90vw;text-align:center;"></div>
+
+<div class="edit-overlay" id="pinOverlay" style="display:none;">
+  <div class="edit-panel" style="max-width:320px;text-align:center;">
+    <h2>เข้าสู่โหมดแอดมิน</h2>
+    <div class="hint" id="pinHint">ใส่รหัสเพื่อจัดการนัด</div>
+    <div class="field">
+      <input type="password" id="pinInput" inputmode="numeric" placeholder="รหัสแอดมิน" autocomplete="off">
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="pinCancelBtn">ยกเลิก</button>
+      <button class="btn primary" id="pinSubmitBtn">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage panel: list view -->
+<div class="edit-overlay" id="manageOverlay" style="display:none;">
+  <div class="edit-panel">
+    <h2>จัดการนัดคุย</h2>
+    <div class="hint">นัดล่วงหน้าได้หลายรายการ ทุกคนจะเห็นรายการที่ใกล้ถึงที่สุดเป็นหลัก</div>
+
+    <div id="requestsSection" style="display:none;">
+      <div class="upcoming-title" style="margin-top:4px;">คำขอนัดจากคนทั่วไป (<span id="reqCount">0</span>)</div>
+      <div class="manage-list" id="requestsList"></div>
+      <div style="height:14px;"></div>
+    </div>
+
+    <div class="upcoming-title">นัดที่ยืนยันแล้ว</div>
+    <div class="manage-list" id="manageList"></div>
+    <button class="add-new-btn" id="addNewBtn">+ เพิ่มนัดใหม่</button>
+    <div class="btnrow">
+      <button class="btn" id="manageCloseBtn">ปิด</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Manage panel: add/edit form -->
+<div class="edit-overlay" id="editOverlay" style="display:none;">
+  <div class="edit-panel">
+    <h2 id="formTitle">เพิ่มนัดใหม่</h2>
+    <div class="hint">กรอกวัน เวลา แอปที่ใช้คุย และลิงก์ห้อง — เพื่อนทุกคนจะเห็นทันที</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>วันที่</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <label>เวลาเริ่ม</label>
+        <input type="time" id="fTime">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>เวลาเลิก (ไม่บังคับ)</label>
+      <input type="time" id="fTimeEnd">
+    </div>
+
+    <div class="field">
+      <label>แพลตฟอร์ม</label>
+      <select id="fPlatform">
+        <option value="Discord">Discord</option>
+        <option value="Instagram">Instagram</option>
+        <option value="Google Meet">Google Meet</option>
+        <option value="Zoom">Zoom</option>
+        <option value="Line">Line</option>
+        <option value="Messenger">Messenger</option>
+        <option value="FaceTime">FaceTime</option>
+        <option value="อื่นๆ">อื่นๆ</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>ลิงก์ห้อง / ลิงก์เข้าร่วม</label>
+      <input type="url" id="fLink" placeholder="https://...">
+    </div>
+
+    <div class="field">
+      <label>โน้ตเพิ่มเติม (ไม่บังคับ)</label>
+      <input type="text" id="fNote" placeholder="เช่น เอาหูฟังมาด้วย">
+    </div>
+
+    <div class="btnrow">
+      <button class="btn danger" id="deleteBtn" style="display:none;">ลบนัดนี้</button>
+      <button class="btn" id="formCancelBtn">ย้อนกลับ</button>
+      <button class="btn primary" id="saveBtn">บันทึกนัด</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// เก็บนัดแบบเป็นรายการ (array) รองรับตั้งล่วงหน้าได้หลายรายการ
+const STORAGE_KEY = 'call-schedule-list';
+// รหัสแอดมิน — แก้ตรงนี้เพื่อเปลี่ยนรหัส (ใครเห็นซอร์สหน้านี้ก็เห็นรหัสได้ ไม่ใช่ระบบล็อกอินจริง แค่กันคนทั่วไปกดพลาด)
+const ADMIN_PIN = '123456';
+
+let schedules = [];      // รายการนัดทั้งหมด
+let tickHandle = null;
+let isAdmin = false;      // ต้องใส่รหัสใหม่ทุกครั้งที่เปิดหน้านี้
+let editingId = null;     // id ของนัดที่กำลังแก้ไข (null = กำลังเพิ่มใหม่)
+
+// ระบบเก็บข้อมูล เรียงลำดับความสำคัญ:
+// 1) Firebase — ถ้ากรอก firebaseConfig ด้านล่างแล้ว จะซิงก์ให้ทุกคนเห็นตรงกันไม่ว่าเปิดจากเครื่องไหน (ใช้ตอนดาวน์โหลดไฟล์ไปโฮสต์เอง)
+// 2) window.storage — ใช้เมื่อเปิดผ่าน Claude artifact โดยตรง (ซิงก์ให้อัตโนมัติอยู่แล้ว)
+// 3) localStorage — สำรองสุดท้าย เก็บเฉพาะเบราว์เซอร์เครื่องนี้เครื่องเดียว ไม่ซิงก์กับใคร
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCHBg5NEAlL0-fjlxv5VvdJwKswd8_Hbjo",
+  authDomain: "call-schedule-72025.firebaseapp.com",
+  projectId: "call-schedule-72025",
+  storageBucket: "call-schedule-72025.firebasestorage.app",
+  messagingSenderId: "972416485326",
+  appId: "1:972416485326:web:eebfce3b45a036eed18d9f"
+};
+
+let db = null;
+let useFirebase = false;
+try{
+  if(firebaseConfig.apiKey && firebaseConfig.apiKey !== 'YOUR_API_KEY' && window.firebase){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    useFirebase = true;
+  }
+}catch(e){
+  console.error('firebase init failed', e);
+}
+
+const hasCloudStorage = !!(window.storage && typeof window.storage.set === 'function');
+const FIRESTORE_COLLECTION = 'callSchedule';
+
+// เก็บทั้งลิสต์เป็น JSON string ไว้ในฟิลด์เดียว (data) เพื่อให้ใช้ store.get/set แบบเดียวกันได้ทุกโหมด
+const store = {
+  async get(key){
+    if(useFirebase){
+      const doc = await db.collection(FIRESTORE_COLLECTION).doc(key).get();
+      if(!doc.exists || typeof doc.data().data !== 'string') throw new Error('not found');
+      return { key, value: doc.data().data, shared: true };
+    }
+    if(hasCloudStorage) return window.storage.get(key, true);
+    const raw = localStorage.getItem(key);
+    if(raw === null) throw new Error('not found');
+    return { key, value: raw, shared: true };
+  },
+  async set(key, value){
+    if(useFirebase){
+      await db.collection(FIRESTORE_COLLECTION).doc(key).set({ data: value });
+      return { key, value, shared: true };
+    }
+    if(hasCloudStorage) return window.storage.set(key, value, true);
+    localStorage.setItem(key, value);
+    return { key, value, shared: true };
+  }
+};
+
+const REQUESTS_KEY = 'call-schedule-requests';
+const REQUESTS_COLLECTION = 'callRequests';
+
+// คำขอนัดจากหน้าเว็บสาธารณะ (call-request.html) — แอดมินกด อนุมัติ/ปฏิเสธ ที่นี่
+const requestsStore = {
+  async add(reqObj){
+    const payload = { ...reqObj, status: 'pending', createdAt: Date.now() };
+    if(useFirebase){
+      const ref = await db.collection(REQUESTS_COLLECTION).add(payload);
+      return ref.id;
+    }
+    const list = await this._loadAll();
+    const id = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+    list.push({ id, ...payload });
+    await this._saveAll(list);
+    return id;
+  },
+  async _loadAll(){
+    try{
+      const res = await store.get(REQUESTS_KEY);
+      return res ? JSON.parse(res.value) : [];
+    }catch(e){ return []; }
+  },
+  async _saveAll(list){
+    await store.set(REQUESTS_KEY, JSON.stringify(list));
+  },
+  // ฟังการเปลี่ยนแปลงคำขอทั้งหมด (ใช้ฝั่งแอดมิน) — คืนฟังก์ชันสำหรับยกเลิกการฟัง
+  listenAll(cb){
+    if(useFirebase){
+      return db.collection(REQUESTS_COLLECTION).onSnapshot((snap)=>{
+        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        arr.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+        cb(arr);
+      }, (err)=> console.error('requests onSnapshot error', err));
+    }
+    const poll = async ()=> cb(await this._loadAll());
+    poll();
+    const h = setInterval(poll, 6000);
+    return ()=> clearInterval(h);
+  },
+  // ฟังสถานะของคำขอเดียว (ใช้ฝั่งผู้ขอ ดูว่าแอดมินอนุมัติหรือยัง)
+  listenOne(id, cb){
+    if(useFirebase){
+      return db.collection(REQUESTS_COLLECTION).doc(id).onSnapshot((doc)=>{
+        cb(doc.exists ? { id: doc.id, ...doc.data() } : null);
+      }, (err)=> console.error('request onSnapshot error', err));
+    }
+    const poll = async ()=>{
+      const list = await this._loadAll();
+      cb(list.find(r => r.id === id) || null);
+    };
+    poll();
+    const h = setInterval(poll, 6000);
+    return ()=> clearInterval(h);
+  },
+  async updateStatus(id, status){
+    if(useFirebase){
+      await db.collection(REQUESTS_COLLECTION).doc(id).update({ status });
+      return;
+    }
+    const list = await this._loadAll();
+    const idx = list.findIndex(r => r.id === id);
+    if(idx !== -1){ list[idx].status = status; await this._saveAll(list); }
+  }
+};
+
+
+const upcomingBox = document.getElementById('upcomingBox');
+const onairBadge = document.getElementById('onairBadge');
+const onairText = document.getElementById('onairText');
+const pinOverlay = document.getElementById('pinOverlay');
+const pinInput = document.getElementById('pinInput');
+const pinHint = document.getElementById('pinHint');
+const manageOverlay = document.getElementById('manageOverlay');
+const manageList = document.getElementById('manageList');
+const requestsSection = document.getElementById('requestsSection');
+const requestsList = document.getElementById('requestsList');
+const reqCount = document.getElementById('reqCount');
+let requestsUnsub = null;
+let latestRequests = [];
+const editOverlay = document.getElementById('editOverlay');
+const formTitle = document.getElementById('formTitle');
+const deleteBtn = document.getElementById('deleteBtn');
+
+let toastTimer = null;
+function showToast(msg, duration){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.display = 'none'; }, duration || 5000);
+}
+
+function iconSVG(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11a9 9 0 0118 0v6a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h2M3 11v3a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3"/></svg>';
+}
+function pencilSVG(){
+  return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+}
+function trashSVG(){
+  return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>';
+}
+
+function toStart(s){ return new Date(s.date + 'T' + s.time + ':00'); }
+function toEnd(s){ return s.timeEnd ? new Date(s.date + 'T' + s.timeEnd + ':00') : null; }
+function hasEnded(s, now){ const e = toEnd(s); return !!e && now >= e; }
+
+function formatDate(d){
+  const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+function escapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+function timeLabelOf(s){
+  return s.timeEnd ? `${s.time}–${s.timeEnd}` : s.time;
+}
+
+function render(){
+  const now = new Date();
+  // เอาเฉพาะนัดที่ยังไม่จบ เรียงจากใกล้ที่สุดไปไกลสุด
+  const active = schedules.filter(s => !hasEnded(s, now)).sort((a,b)=> toStart(a) - toStart(b));
+
+  if(active.length === 0){
+    onairBadge.classList.remove('live');
+    onairText.textContent = 'STANDBY';
+    mainContent.innerHTML = `
+      <div class="radar">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="icon-core">${iconSVG()}</div>
+      </div>
+      <div class="empty">ยังไม่มีนัดคุย<br>กดไอคอนเฟืองมุมขวาบนเพื่อตั้งเวลา</div>
+    `;
+    upcomingBox.innerHTML = '';
+    if(tickHandle) clearInterval(tickHandle);
+    return;
+  }
+
+  const featured = active[0];
+  const rest = active.slice(1);
+  const start = toStart(featured);
+  const end = toEnd(featured);
+  const timeLabel = timeLabelOf(featured);
+
+  mainContent.innerHTML = `
+    <div class="radar">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="icon-core">${iconSVG()}</div>
+    </div>
+    <div class="headline">
+      <div class="eyebrow">นัดคุยครั้งต่อไป</div>
+      <div class="title">${escapeHtml(featured.platform)}</div>
+      <div class="subtitle">${formatDate(start)} · ${timeLabel} น.${featured.note ? ' · '+escapeHtml(featured.note) : ''}</div>
+    </div>
+    <div class="clock" id="clockBox"></div>
+    <a class="join" id="joinBtn" href="${featured.link || '#'}" target="_blank" rel="noopener">
+      เข้าร่วมผ่าน ${escapeHtml(featured.platform)}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
+  `;
+
+  if(!featured.link){
+    const j = document.getElementById('joinBtn');
+    j.classList.add('disabled');
+    j.textContent = 'ยังไม่ได้ใส่ลิงก์';
+    j.removeAttribute('href');
+  }
+
+  // รายการนัดที่จะถึงถัดไป (ไม่รวมนัดเด่นด้านบน)
+  if(rest.length){
+    upcomingBox.innerHTML = `
+      <div class="upcoming">
+        <div class="upcoming-title">นัดถัดไปที่ยังไม่ถึง (${rest.length})</div>
+        ${rest.map(s => `
+          <div class="upcoming-item">
+            <div class="info">
+              <div class="plat">${escapeHtml(s.platform)}</div>
+              <div class="when">${formatDate(toStart(s))} · ${timeLabelOf(s)} น.${s.note ? ' · '+escapeHtml(s.note) : ''}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }else{
+    upcomingBox.innerHTML = '';
+  }
+
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(()=>tick(featured, start, end), 1000);
+  tick(featured, start, end);
+}
+
+function tick(featured, start, end){
+  const now = new Date();
+  const box = document.getElementById('clockBox');
+  if(!box) return;
+
+  if(now < start){
+    onairBadge.classList.remove('live');
+    onairText.textContent = 'STANDBY';
+    let diff = Math.floor((start - now)/1000);
+    const d = Math.floor(diff/86400); diff -= d*86400;
+    const h = Math.floor(diff/3600); diff -= h*3600;
+    const m = Math.floor(diff/60); diff -= m*60;
+    const s = diff;
+    box.innerHTML = seg(d,'วัน') + seg(h,'ชม.') + seg(m,'นาที') + seg(s,'วินาที');
+    return;
+  }
+
+  onairBadge.classList.add('live');
+  onairText.textContent = 'ON AIR';
+
+  if(end){
+    let diff = Math.floor((end - now)/1000);
+    if(diff < 0) diff = 0;
+    const h = Math.floor(diff/3600); diff -= h*3600;
+    const m = Math.floor(diff/60); diff -= m*60;
+    const s = diff;
+    box.innerHTML = `<div class="seg" style="min-width:100%;padding:10px 14px;"><div class="num">เหลืออีก ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}</div><div class="lab">ก่อนหมดเวลาคุย</div></div>`;
+    if(diff <= 0){
+      render(); // หมดเวลาพอดี — สลับไปนัดถัดไปโดยอัตโนมัติ
+    }
+  }else{
+    box.innerHTML = `<div class="seg"><div class="num">คุย</div><div class="lab">อยู่!</div></div>`;
+  }
+}
+function seg(v, label){
+  return `<div class="seg"><div class="num">${String(v).padStart(2,'0')}</div><div class="lab">${label}</div></div>`;
+}
+
+async function loadSchedules(){
+  try{
+    const res = await store.get(STORAGE_KEY);
+    schedules = res ? JSON.parse(res.value) : [];
+    render();
+  }catch(e){
+    // ยังไม่เคยมีนัด หรือซิงก์รอบนี้พลาด — คงของเดิมในเครื่องไว้ก่อน
+    render();
+  }
+}
+
+async function persist(){
+  try{
+    const result = await store.set(STORAGE_KEY, JSON.stringify(schedules));
+    if(!result){
+      showToast('⚠️ บันทึกไม่สำเร็จ (storage คืนค่าว่าง) — ลองอีกครั้ง');
+      return false;
+    }
+    if(!useFirebase && !hasCloudStorage){
+      showToast('บันทึกแล้ว (เก็บไว้ในเบราว์เซอร์นี้เครื่องเดียว ไม่ซิงก์กับเพื่อนคนอื่น)', 6000);
+    }
+    return true;
+  }catch(e){
+    console.error('save failed', e);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : 'ไม่ทราบสาเหตุ'));
+    return false;
+  }
+}
+
+// ===== Manage panel (list view) =====
+function openManagePanel(){
+  renderManageList();
+  manageOverlay.style.display = 'flex';
+  if(!requestsUnsub){
+    requestsUnsub = requestsStore.listenAll((arr)=>{
+      latestRequests = arr;
+      renderRequestsList();
+    });
+  }
+}
+function closeManagePanel(){
+  manageOverlay.style.display = 'none';
+  if(requestsUnsub){ requestsUnsub(); requestsUnsub = null; }
+}
+function renderRequestsList(){
+  const pending = latestRequests.filter(r => r.status === 'pending');
+  reqCount.textContent = pending.length;
+  requestsSection.style.display = pending.length ? 'block' : 'none';
+  requestsList.innerHTML = pending.map(r => `
+    <div class="upcoming-item">
+      <div class="info">
+        <div class="plat">${escapeHtml(r.requester || 'ไม่ระบุชื่อ')} → ${escapeHtml(r.platform || '')}</div>
+        <div class="when">${r.date} · ${r.timeEnd ? (r.time+'–'+r.timeEnd) : r.time} น.${r.note ? ' · '+escapeHtml(r.note) : ''}</div>
+      </div>
+      <div class="acts">
+        <button class="icon-btn" data-approve="${r.id}" title="อนุมัติ" style="color:var(--cyan);">✓</button>
+        <button class="icon-btn danger" data-reject="${r.id}" title="ปฏิเสธ">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  requestsList.querySelectorAll('[data-approve]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-approve');
+      const r = latestRequests.find(x => x.id === id);
+      if(!r) return;
+      schedules.push({
+        id: 'sch_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+        date: r.date, time: r.time, timeEnd: r.timeEnd || '',
+        platform: r.platform || 'อื่นๆ', link: r.link || '',
+        note: r.requester ? `นัดกับ ${r.requester}${r.note ? ' · '+r.note : ''}` : (r.note || '')
+      });
+      render();
+      await persist();
+      await requestsStore.updateStatus(id, 'approved');
+      showToast('อนุมัติแล้ว เพิ่มเข้ารายการนัดแล้ว');
+    });
+  });
+  requestsList.querySelectorAll('[data-reject]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-reject');
+      await requestsStore.updateStatus(id, 'rejected');
+      showToast('ปฏิเสธคำขอแล้ว');
+    });
+  });
+}
+function renderManageList(){
+  const now = new Date();
+  const items = schedules.slice().sort((a,b)=> toStart(a) - toStart(b));
+  if(items.length === 0){
+    manageList.innerHTML = '<div class="manage-empty">ยังไม่มีนัดในระบบ</div>';
+    return;
+  }
+  manageList.innerHTML = items.map(s => `
+    <div class="upcoming-item">
+      <div class="info">
+        <div class="plat">${escapeHtml(s.platform)}${hasEnded(s, now) ? ' · จบแล้ว' : ''}</div>
+        <div class="when">${formatDate(toStart(s))} · ${timeLabelOf(s)} น.${s.note ? ' · '+escapeHtml(s.note) : ''}</div>
+      </div>
+      <div class="acts">
+        <button class="icon-btn" data-edit="${s.id}" title="แก้ไข">${pencilSVG()}</button>
+        <button class="icon-btn danger" data-del="${s.id}" title="ลบ">${trashSVG()}</button>
+      </div>
+    </div>
+  `).join('');
+
+  manageList.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openEditForm(btn.getAttribute('data-edit')));
+  });
+  manageList.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-del');
+      schedules = schedules.filter(s => s.id !== id);
+      render();
+      await persist();
+      renderManageList();
+      showToast('ลบนัดแล้ว');
+    });
+  });
+}
+
+// ===== Add/Edit form =====
+function openEditForm(id){
+  editingId = id || null;
+  const s = editingId ? schedules.find(x => x.id === editingId) : null;
+  formTitle.textContent = s ? 'แก้ไขนัด' : 'เพิ่มนัดใหม่';
+  deleteBtn.style.display = s ? 'block' : 'none';
+  document.getElementById('fDate').value = s ? s.date : '';
+  document.getElementById('fTime').value = s ? s.time : '';
+  document.getElementById('fTimeEnd').value = s ? (s.timeEnd || '') : '';
+  document.getElementById('fPlatform').value = s ? s.platform : 'Discord';
+  document.getElementById('fLink').value = s ? (s.link || '') : '';
+  document.getElementById('fNote').value = s ? (s.note || '') : '';
+  manageOverlay.style.display = 'none';
+  editOverlay.style.display = 'flex';
+}
+
+document.getElementById('editBtn').addEventListener('click', ()=>{
+  if(isAdmin){
+    openManagePanel();
+    return;
+  }
+  pinHint.textContent = 'ใส่รหัสเพื่อจัดการนัด';
+  pinInput.value = '';
+  pinOverlay.style.display = 'flex';
+  setTimeout(()=>pinInput.focus(), 50);
+});
+document.getElementById('pinCancelBtn').addEventListener('click', ()=>{
+  pinOverlay.style.display = 'none';
+});
+function submitPin(){
+  if(pinInput.value === ADMIN_PIN){
+    isAdmin = true;
+    pinOverlay.style.display = 'none';
+    openManagePanel();
+  }else{
+    pinHint.textContent = 'รหัสไม่ถูกต้อง ลองอีกครั้ง';
+    pinInput.value = '';
+    pinInput.focus();
+  }
+}
+document.getElementById('pinSubmitBtn').addEventListener('click', submitPin);
+pinInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') submitPin();
+});
+
+document.getElementById('manageCloseBtn').addEventListener('click', closeManagePanel);
+document.getElementById('addNewBtn').addEventListener('click', ()=> openEditForm(null));
+document.getElementById('formCancelBtn').addEventListener('click', ()=>{
+  editOverlay.style.display = 'none';
+  openManagePanel();
+});
+deleteBtn.addEventListener('click', async ()=>{
+  if(!editingId) return;
+  schedules = schedules.filter(s => s.id !== editingId);
+  render();
+  await persist();
+  editOverlay.style.display = 'none';
+  showToast('ลบนัดแล้ว');
+});
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const date = document.getElementById('fDate').value;
+  const time = document.getElementById('fTime').value;
+  const timeEnd = document.getElementById('fTimeEnd').value;
+  const platform = document.getElementById('fPlatform').value;
+  const link = document.getElementById('fLink').value.trim();
+  const note = document.getElementById('fNote').value.trim();
+
+  if(!date || !time){
+    showToast('กรุณาใส่วันที่และเวลา');
+    return;
+  }
+  if(timeEnd && timeEnd <= time){
+    showToast('เวลาเลิกต้องอยู่หลังเวลาเริ่ม');
+    return;
+  }
+
+  if(editingId){
+    const idx = schedules.findIndex(s => s.id === editingId);
+    if(idx !== -1){
+      schedules[idx] = { ...schedules[idx], date, time, timeEnd, platform, link, note };
+    }
+  }else{
+    schedules.push({
+      id: 'sch_' + Date.now() + '_' + Math.random().toString(36).slice(2,8),
+      date, time, timeEnd, platform, link, note
+    });
+  }
+
+  render();
+  const ok = await persist();
+  editOverlay.style.display = 'none';
+  if(ok) showToast('บันทึกนัดแล้ว');
+});
+
+loadSchedules();
+
+if(useFirebase){
+  // ใช้ realtime listener ของ Firestore แทนการ poll — อัปเดตทันทีที่แอดมินแก้ไข ไม่ต้องรอ 8 วิ
+  db.collection(FIRESTORE_COLLECTION).doc(STORAGE_KEY).onSnapshot((doc)=>{
+    if(doc.exists && typeof doc.data().data === 'string'){
+      schedules = JSON.parse(doc.data().data);
+    }else{
+      schedules = [];
+    }
+    render();
+  }, (err)=>{
+    console.error('onSnapshot error', err);
+  });
+}else if(hasCloudStorage){
+  setInterval(loadSchedules, 8000); // sync กับเพื่อนคนอื่นที่อาจแก้ไขนัด
+}
+</script>
+
+</body>
+</html>

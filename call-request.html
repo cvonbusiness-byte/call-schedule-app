@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ขอนัดคุย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#0a0a14;
+    --panel:#12121f;
+    --panel-2:#181828;
+    --pink:#ff3cac;
+    --cyan:#00f0ff;
+    --violet:#7b2ff7;
+    --gold:#ffd23f;
+    --text:#f2f0ff;
+    --muted:#8b8aa8;
+    --line:#26263c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(123,47,247,0.25), transparent 60%),
+      radial-gradient(1000px 500px at 85% 110%, rgba(0,240,255,0.15), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .stage{width:100%;max-width:420px;}
+  .card{
+    position:relative;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:30px 26px 26px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    letter-spacing:0.16em;
+    color:var(--muted);
+    margin-bottom:8px;
+    text-align:center;
+  }
+  h1{
+    font-size:21px;
+    margin:0 0 6px;
+    text-align:center;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:13.5px;
+    text-align:center;
+    margin-bottom:24px;
+    line-height:1.6;
+  }
+  .field{margin-bottom:15px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:11px 12px;
+    background:rgba(0,0,0,0.3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--cyan);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .submit-btn{
+    width:100%;
+    padding:14px;
+    margin-top:6px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(90deg, var(--pink), var(--violet));
+    color:#fff;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 10px 30px rgba(123,47,247,0.35);
+  }
+  .submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+  /* Status / waiting view */
+  .status-view{text-align:center;padding:10px 4px;}
+  .status-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;font-weight:700;letter-spacing:0.12em;
+    padding:7px 14px;border-radius:999px;
+    border:1px solid var(--line);
+    color:var(--muted);
+    margin-bottom:18px;
+  }
+  .status-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+  .status-badge.pending{color:var(--gold);border-color:rgba(255,210,63,0.4);}
+  .status-badge.pending .dot{background:var(--gold);box-shadow:0 0 10px var(--gold);animation:blink 1.2s ease-in-out infinite;}
+  .status-badge.approved{color:#4bffa0;border-color:rgba(75,255,160,0.4);}
+  .status-badge.approved .dot{background:#4bffa0;box-shadow:0 0 10px #4bffa0;}
+  .status-badge.rejected{color:var(--pink);border-color:rgba(255,60,172,0.4);}
+  .status-badge.rejected .dot{background:var(--pink);}
+  @keyframes blink{50%{opacity:0.25;}}
+
+  .status-title{font-size:18px;font-weight:700;margin-bottom:6px;}
+  .status-detail{color:var(--muted);font-size:13.5px;line-height:1.7;margin-bottom:20px;}
+  .again-btn{
+    padding:11px 18px;border-radius:10px;border:1px solid var(--line);
+    background:transparent;color:var(--text);font-size:13.5px;cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .again-btn:hover{border-color:var(--cyan);}
+  .foot{
+    text-align:center;font-size:11px;color:var(--muted);
+    margin-top:18px;opacity:0.8;
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="card">
+
+    <!-- ฟอร์มขอนัด -->
+    <div id="formView">
+      <h1>นัด Call</h1>
+
+      <div class="field">
+        <label>ชื่อของคุณ</label>
+        <input type="text" id="fName" placeholder="ชื่อ / ชื่อเล่น">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>วันที่อยากนัด</label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="field">
+          <label>เวลาเริ่ม</label>
+          <input type="time" id="fTime">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>เวลาเลิก (ไม่บังคับ)</label>
+        <input type="time" id="fTimeEnd">
+      </div>
+
+      <div class="field">
+        <label>อยากคุยผ่านแอปไหน</label>
+        <select id="fPlatform">
+          <option value="Discord">Discord</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Google Meet">Google Meet</option>
+          <option value="Zoom">Zoom</option>
+          <option value="Line">Line</option>
+          <option value="Messenger">Messenger</option>
+          <option value="FaceTime">FaceTime</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>อยากคุยเรื่องอะไร (ไม่บังคับ)</label>
+        <input type="text" id="fNote" placeholder="เช่น ปรึกษาเรื่องงาน">
+      </div>
+
+      <button class="submit-btn" id="submitBtn">ส่งคำขอนัด</button>
+    </div>
+
+    <!-- หน้าสถานะ / รอผล -->
+    <div id="statusView" class="status-view" style="display:none;">
+      <div class="status-badge" id="statusBadge"><span class="dot"></span><span id="statusText">รออนุมัติ</span></div>
+      <div class="status-title" id="statusTitle">ส่งคำขอแล้ว</div>
+      <div class="status-detail" id="statusDetail"></div>
+      <button class="again-btn" id="againBtn">ส่งคำขอใหม่อีกครั้ง</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:#1c1c30;border:1px solid var(--line);color:var(--text);padding:12px 18px;
+  border-radius:12px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:50;max-width:90vw;text-align:center;"></div>
+
+<script>
+// ต้องใช้ firebaseConfig เดียวกับเว็บแอดมิน (call-schedule.html) ไม่งั้นคำขอจะไม่ไปโผล่ในคิวของแอดมิน
+const firebaseConfig = {
+  apiKey: "AIzaSyCHBg5NEAlL0-fjlxv5VvdJwKswd8_Hbjo",
+  authDomain: "call-schedule-72025.firebaseapp.com",
+  projectId: "call-schedule-72025",
+  storageBucket: "call-schedule-72025.firebasestorage.app",
+  messagingSenderId: "972416485326",
+  appId: "1:972416485326:web:eebfce3b45a036eed18d9f"
+};
+
+let db = null;
+let useFirebase = false;
+try{
+  if(firebaseConfig.apiKey && window.firebase){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    useFirebase = true;
+  }
+}catch(e){
+  console.error('firebase init failed', e);
+}
+
+const REQUESTS_KEY = 'call-schedule-requests';
+const REQUESTS_COLLECTION = 'callRequests';
+const LAST_REQUEST_ID_KEY = 'call-request-my-last-id';
+
+async function loadLocalList(){
+  try{ const raw = localStorage.getItem(REQUESTS_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+async function saveLocalList(list){
+  localStorage.setItem(REQUESTS_KEY, JSON.stringify(list));
+}
+
+async function submitRequest(reqObj){
+  const payload = { ...reqObj, status: 'pending', createdAt: Date.now() };
+  if(useFirebase){
+    const ref = await db.collection(REQUESTS_COLLECTION).add(payload);
+    return ref.id;
+  }
+  // สำรอง: ไม่มี Firebase — เก็บในเบราว์เซอร์นี้เท่านั้น (แอดมินจะไม่เห็นถ้าเปิดจากเครื่องอื่น)
+  const list = await loadLocalList();
+  const id = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+  list.push({ id, ...payload });
+  await saveLocalList(list);
+  return id;
+}
+
+function listenStatus(id, cb){
+  if(useFirebase){
+    return db.collection(REQUESTS_COLLECTION).doc(id).onSnapshot((doc)=>{
+      cb(doc.exists ? { id: doc.id, ...doc.data() } : null);
+    }, (err)=> console.error('listen error', err));
+  }
+  const poll = async ()=>{
+    const list = await loadLocalList();
+    cb(list.find(r => r.id === id) || null);
+  };
+  poll();
+  const h = setInterval(poll, 5000);
+  return ()=> clearInterval(h);
+}
+
+const formView = document.getElementById('formView');
+const statusView = document.getElementById('statusView');
+const statusBadge = document.getElementById('statusBadge');
+const statusText = document.getElementById('statusText');
+const statusTitle = document.getElementById('statusTitle');
+const statusDetail = document.getElementById('statusDetail');
+let unsub = null;
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(()=>{ t.style.display = 'none'; }, 4000);
+}
+
+function renderStatus(req){
+  if(!req){
+    statusTitle.textContent = 'ไม่พบคำขอนี้แล้ว';
+    statusDetail.textContent = 'อาจถูกลบหรือยังไม่บันทึกสำเร็จ ลองส่งคำขอใหม่อีกครั้ง';
+    statusBadge.className = 'status-badge';
+    statusText.textContent = 'ไม่พบข้อมูล';
+    return;
+  }
+  const when = `${req.date} · ${req.timeEnd ? (req.time+'–'+req.timeEnd) : req.time} น.`;
+  if(req.status === 'approved'){
+    statusBadge.className = 'status-badge approved';
+    statusText.textContent = 'อนุมัติแล้ว';
+    statusTitle.textContent = 'นัดของคุณได้รับการยืนยันแล้ว 🎉';
+    statusDetail.textContent = `${when} ผ่าน ${req.platform} — เดี๋ยว Admin จะติดต่อไปเพื่อส่งลิงก์ห้องอีกที`;
+  }else if(req.status === 'rejected'){
+    statusBadge.className = 'status-badge rejected';
+    statusText.textContent = 'ไม่สามารถนัดได้';
+    statusTitle.textContent = 'ขอโทษด้วย รอบนี้ติดขัด';
+    statusDetail.textContent = 'ลองส่งคำขอใหม่ในวัน/เวลาอื่นดูนะ';
+  }else{
+    statusBadge.className = 'status-badge pending';
+    statusText.textContent = 'รออนุมัติ';
+    statusTitle.textContent = 'ส่งคำขอแล้ว รอ Admin ตรวจสอบ';
+    statusDetail.textContent = `${when} ผ่าน ${req.platform} — หน้านี้จะอัปเดตสถานะให้อัตโนมัติเมื่อ Admin ตอบกลับ`;
+  }
+}
+
+function watchRequest(id){
+  formView.style.display = 'none';
+  statusView.style.display = 'block';
+  if(unsub) unsub();
+  unsub = listenStatus(id, renderStatus);
+}
+
+document.getElementById('submitBtn').addEventListener('click', async ()=>{
+  const requester = document.getElementById('fName').value.trim();
+  const date = document.getElementById('fDate').value;
+  const time = document.getElementById('fTime').value;
+  const timeEnd = document.getElementById('fTimeEnd').value;
+  const platform = document.getElementById('fPlatform').value;
+  const note = document.getElementById('fNote').value.trim();
+
+  if(!requester){ showToast('กรุณาใส่ชื่อของคุณ'); return; }
+  if(!date || !time){ showToast('กรุณาใส่วันที่และเวลา'); return; }
+  if(timeEnd && timeEnd <= time){ showToast('เวลาเลิกต้องอยู่หลังเวลาเริ่ม'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังส่ง...';
+  try{
+    const id = await submitRequest({ requester, date, time, timeEnd, platform, note });
+    localStorage.setItem(LAST_REQUEST_ID_KEY, id);
+    watchRequest(id);
+  }catch(e){
+    console.error(e);
+    showToast('ส่งคำขอไม่สำเร็จ ลองอีกครั้ง');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'ส่งคำขอนัด';
+  }
+});
+
+document.getElementById('againBtn').addEventListener('click', ()=>{
+  if(unsub){ unsub(); unsub = null; }
+  localStorage.removeItem(LAST_REQUEST_ID_KEY);
+  document.getElementById('fName').value = '';
+  document.getElementById('fDate').value = '';
+  document.getElementById('fTime').value = '';
+  document.getElementById('fTimeEnd').value = '';
+  document.getElementById('fNote').value = '';
+  statusView.style.display = 'none';
+  formView.style.display = 'block';
+});
+
+// ถ้าเคยส่งคำขอไว้แล้วในเครื่องนี้ (ยังไม่กดส่งใหม่) ให้กลับไปโชว์สถานะล่าสุดทันทีที่เปิดหน้า
+const lastId = localStorage.getItem(LAST_REQUEST_ID_KEY);
+if(lastId){
+  watchRequest(lastId);
+}
+</script>
+
+</body>
+</html>
