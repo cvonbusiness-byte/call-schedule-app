@@ -28,7 +28,9 @@ exports.handler = async () => {
     let sentCount = 0;
 
     for (const c of calls) {
-      const start = new Date(`${c.date}T${c.time}:00`);
+      // +07:00 = เวลาไทย (เพราะเซิร์ฟเวอร์ Netlify ใช้เวลา UTC)
+      const start = new Date(`${c.date}T${c.time}:00+07:00`);
+
       if (start > now && start <= in5min) {
         const notifiedRef = db.collection('callScheduleApp_notified').doc(c.id);
         const notifiedSnap = await notifiedRef.get();
