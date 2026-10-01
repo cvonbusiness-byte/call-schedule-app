@@ -6,7 +6,6 @@
 <title>นัดโทร · ON AIR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<!-- Firebase (ใช้เมื่อดาวน์โหลดไฟล์ไปโฮสต์เอง เพื่อให้ทุกคนเห็นนัดเดียวกันไม่ว่าเปิดจากเครื่องไหน) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
@@ -37,10 +36,7 @@
     justify-content:center;
     padding:24px;
   }
-  .stage{
-    width:100%;
-    max-width:460px;
-  }
+  .stage{width:100%;max-width:460px;}
   .card{
     position:relative;
     background:linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -54,8 +50,7 @@
     content:'';
     position:absolute;
     inset:0;
-    background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
     pointer-events:none;
   }
   .topbar{
@@ -145,16 +140,8 @@
     color:var(--muted);
     margin-bottom:8px;
   }
-  .title{
-    font-size:22px;
-    font-weight:700;
-    margin:0 0 6px;
-  }
-  .subtitle{
-    color:var(--muted);
-    font-size:14px;
-    margin-bottom:22px;
-  }
+  .title{font-size:22px;font-weight:700;margin:0 0 6px;}
+  .subtitle{color:var(--muted);font-size:14px;margin-bottom:22px;}
 
   .clock{
     display:flex;
@@ -176,6 +163,10 @@
     font-weight:700;
     color:var(--cyan);
     text-shadow:0 0 12px rgba(0,240,255,0.5);
+  }
+  .clock.live .num{
+    color:var(--gold);
+    text-shadow:0 0 12px rgba(255,210,63,0.5);
   }
   .clock .lab{
     font-size:10px;
@@ -222,7 +213,6 @@
     line-height:1.6;
   }
 
-  /* Edit panel */
   .edit-overlay{
     position:fixed;inset:0;
     background:rgba(5,5,10,0.72);
@@ -233,6 +223,8 @@
   }
   .edit-panel{
     width:100%;max-width:400px;
+    max-height:92vh;
+    overflow-y:auto;
     background:var(--panel);
     border:1px solid var(--line);
     border-radius:20px;
@@ -298,7 +290,6 @@
     opacity:0.8;
   }
 
-  /* ตารางนัดคอล (public) */
   .table-section{
     margin-top:26px;
     padding-top:20px;
@@ -345,6 +336,7 @@
     padding:2px 8px;
     flex-shrink:0;
   }
+  .row-tag.live{color:var(--gold);border-color:rgba(255,210,63,0.4);}
   .row-arrow{color:var(--muted);flex-shrink:0;}
   a.row-item:hover .row-arrow{color:var(--cyan);}
   .empty-table{
@@ -354,7 +346,6 @@
     padding:10px 0 2px;
   }
 
-  /* Admin: manage list */
   .manage-row{
     display:flex;
     align-items:center;
@@ -387,7 +378,6 @@
     padding:18px 0;
   }
 
-  /* ขอนัดคุย (public request) */
   .request-btn{
     display:block;
     width:100%;
@@ -425,7 +415,6 @@
   .status-title{font-size:17px;font-weight:700;margin-bottom:6px;}
   .status-detail{color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:20px;}
 
-  /* Admin tabs */
   .tabrow{display:flex;gap:8px;margin-bottom:18px;}
   .tab-btn{
     flex:1;
@@ -457,7 +446,6 @@
   .req-actions{display:flex;gap:8px;}
   .req-actions .btn{padding:9px;font-size:12.5px;}
 
-  /* Home screen */
   .backbtn{
     background:transparent;
     border:none;
@@ -475,15 +463,8 @@
 
   .brand{text-align:center;margin-bottom:6px;}
   .brand .icon-core{margin:0 auto 18px;}
-  .brand h1{
-    font-size:19px;
-    margin:0 0 6px;
-  }
-  .brand .brand-sub{
-    color:var(--muted);
-    font-size:13px;
-    margin-bottom:28px;
-  }
+  .brand h1{font-size:19px;margin:0 0 6px;}
+  .brand .brand-sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
 
   .nav-cards{display:flex;flex-direction:column;gap:12px;}
   .nav-card{
@@ -541,7 +522,7 @@
       </button>
     </div>
 
-    <!-- หน้าแรก: เลือกนัดคอล หรือ ตารางนัดคอล -->
+    <!-- หน้าแรก -->
     <div id="homeView">
       <div class="brand">
         <div class="icon-core" style="width:64px;height:64px;">
@@ -697,16 +678,21 @@
     <!-- ฟอร์มเพิ่ม/แก้ไขนัดเดียว -->
     <div id="manageFormView" style="display:none;">
       <h2 id="formTitle">เพิ่มนัดใหม่</h2>
-      <div class="hint">กรอกวัน เวลา แอปที่ใช้คุย และลิงก์ห้อง</div>
+      <div class="hint">กรอกวัน เวลาเริ่ม-เลิก แอปที่ใช้คุย และลิงก์ห้อง</div>
+
+      <div class="field">
+        <label>วันที่</label>
+        <input type="date" id="fDate">
+      </div>
 
       <div class="row2">
         <div class="field">
-          <label>วันที่</label>
-          <input type="date" id="fDate">
+          <label>เวลาเริ่ม</label>
+          <input type="time" id="fTime">
         </div>
         <div class="field">
-          <label>เวลา</label>
-          <input type="time" id="fTime">
+          <label>เวลาเลิก (ไม่บังคับ)</label>
+          <input type="time" id="fTimeEnd">
         </div>
       </div>
 
@@ -746,10 +732,12 @@
 
 <script>
 const STORAGE_KEY = 'call-schedule';
-// รหัสแอดมิน — แก้ตรงนี้เพื่อเปลี่ยนรหัส (ใครเห็นซอร์สหน้านี้ก็เห็นรหัสได้ ไม่ใช่ระบบล็อกอินจริง แค่กันคนทั่วไปกดพลาด)
+// รหัสแอดมิน — แก้ตรงนี้เพื่อเปลี่ยนรหัส (ใครเปิดซอร์สหน้านี้ก็เห็นรหัสได้ ไม่ใช่ระบบล็อกอินจริง)
 const ADMIN_PIN = '123456';
 
-// ลิงก์ตายตัวสำหรับแพลตฟอร์มที่บังคับใช้ลิงก์เดียว (ห้ามพิมพ์ลิงก์อื่น) — แก้ลิงก์ได้ตรงนี้ที่เดียว
+// ถ้านัดไม่ได้ใส่เวลาเลิก ให้ ON AIR กี่นาที (ค่าเริ่มต้น 60 นาที)
+const DEFAULT_DURATION_MIN = 60;
+
 const PLATFORM_LINKS = {
   'Line': 'https://line.me/ti/g/XgXV6nawbU',
   'Instagram': 'https://ig.me/j/AbZUK2CrP4Flw-DN/',
@@ -774,7 +762,7 @@ function syncLinkField(){
   }
 }
 
-// ===== เชื่อม Firebase (Firestore) โปรเจกต์เดียวกับที่ตั้งไว้ก่อนหน้า =====
+// ===== เชื่อม Firebase (Firestore) =====
 const firebaseConfig = {
   apiKey: "AIzaSyCHBg5NEAlL0-fjlxv5VvdJwKswd8_Hbjo",
   authDomain: "call-schedule-72025.firebaseapp.com",
@@ -794,18 +782,18 @@ try{
 }catch(e){
   console.error('firebase init failed', e);
 }
-const FIRESTORE_COLLECTION = 'callScheduleApp'; // คนละ collection กับไฟล์เวอร์ชันเก่า กันข้อมูลชนกัน
+const FIRESTORE_COLLECTION = 'callScheduleApp';
 // ==========================================================================
 
-let calls = [];        // รายการนัดคอลทั้งหมด [{id,date,time,platform,link,note}]
-let editingId = null;  // id ของนัดที่กำลังแก้ไขในฟอร์ม, null = กำลังเพิ่มใหม่
+let calls = [];        // [{id,date,time,timeEnd,platform,link,note}]
+let editingId = null;
 let tickHandle = null;
-let isAdmin = false; // ต้องใส่รหัสใหม่ทุกครั้งที่เปิดหน้านี้
+let isAdmin = false;
 
 const REQUESTS_KEY = 'call-schedule-requests';
-const MY_REQUEST_ID_KEY = 'call-request-my-last-id'; // เก็บเฉพาะเครื่องนี้ ไว้จำว่าคำขอล่าสุดของตัวเองคืออันไหน
-let requests = [];          // คำขอนัดทั้งหมด [{id,requester,date,time,timeEnd,platform,note,status,createdAt}]
-let approvingRequestId = null; // ถ้าไม่ใช่ null = กำลังกดอนุมัติคำขอนี้อยู่ (ตอนบันทึกฟอร์มจะอัปเดตสถานะคำขอด้วย)
+const MY_REQUEST_ID_KEY = 'call-request-my-last-id';
+let requests = [];
+let approvingRequestId = null;
 
 function newId(){
   return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
@@ -813,20 +801,25 @@ function newId(){
 function callDateTime(c){
   return new Date(c.date + 'T' + c.time + ':00');
 }
+// เวลาเลิก: ถ้าไม่ได้ใส่ จะนับจากเวลาเริ่ม + DEFAULT_DURATION_MIN นาที
+function callEnd(c){
+  if(c.timeEnd) return new Date(c.date + 'T' + c.timeEnd + ':00');
+  return new Date(callDateTime(c).getTime() + DEFAULT_DURATION_MIN * 60000);
+}
+function timeRange(c){
+  return c.timeEnd ? (c.time + '–' + c.timeEnd) : c.time;
+}
+// นัดที่ยังไม่จบ (ยังไม่ถึงเวลาเลิก) ที่ใกล้ที่สุด
 function getNextCall(){
   const now = new Date();
   return calls
-    .filter(c => callDateTime(c) >= now)
+    .filter(c => callEnd(c) > now)
     .sort((a,b) => callDateTime(a) - callDateTime(b))[0] || null;
 }
 function getSortedCalls(){
   return [...calls].sort((a,b) => callDateTime(a) - callDateTime(b));
 }
 
-// ระบบเก็บข้อมูล เรียงลำดับความสำคัญ:
-// 1) window.storage — ใช้เมื่อเปิดผ่าน Claude artifact โดยตรง (ซิงก์ให้ทุกคนอัตโนมัติ)
-// 2) Firebase Firestore — ใช้ตอนดาวน์โหลดไปโฮสต์เอง (ซิงก์ข้ามเครื่อง/ข้ามคนได้จริง)
-// 3) localStorage — สำรองสุดท้าย เก็บเฉพาะเบราว์เซอร์เครื่องนี้เครื่องเดียว
 const hasCloudStorage = !!(window.storage && typeof window.storage.set === 'function');
 const storageMode = hasCloudStorage ? 'claude' : (useFirebase ? 'firebase' : 'local');
 
@@ -881,7 +874,7 @@ function showToast(msg, duration){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>{ t.style.display = 'none'; }, duration || 5000);
 }
-let formOrigin = 'schedule'; // 'schedule' หรือ 'requests' — ใช้ตอนกดกลับจากฟอร์ม
+let formOrigin = 'schedule';
 
 function showScreen(name){
   homeView.style.display = name === 'home' ? 'block' : 'none';
@@ -922,14 +915,15 @@ function renderManageList(){
     wrap.innerHTML = '<div class="manage-empty">ยังไม่มีนัดในตาราง กด "เพิ่มนัดใหม่" ด้านล่าง</div>';
     return;
   }
+  const now = new Date();
   wrap.innerHTML = sorted.map(c => {
     const dt = callDateTime(c);
-    const isPast = dt < new Date();
+    const isPast = callEnd(c) <= now;
     return `
       <div class="manage-row">
         <div class="info">
           <div class="mp">${escapeHtml(c.platform)}</div>
-          <div class="md">${formatDate(dt)} · ${c.time} น.${isPast ? ' · ผ่านไปแล้ว' : ''}</div>
+          <div class="md">${formatDate(dt)} · ${timeRange(c)} น.${isPast ? ' · ผ่านไปแล้ว' : ''}</div>
         </div>
         <button class="icon-btn" data-edit="${c.id}" title="แก้ไข">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -965,6 +959,7 @@ function openForm(id){
   document.getElementById('formTitle').textContent = c ? 'แก้ไขนัด' : 'เพิ่มนัดใหม่';
   document.getElementById('fDate').value = c ? c.date : '';
   document.getElementById('fTime').value = c ? c.time : '';
+  document.getElementById('fTimeEnd').value = c ? (c.timeEnd || '') : '';
   document.getElementById('fPlatform').value = c ? c.platform : 'Discord';
   document.getElementById('fLink').value = c ? c.link : '';
   document.getElementById('fNote').value = c ? c.note : '';
@@ -983,7 +978,7 @@ function render(){
   const scheduleSub = document.getElementById('scheduleCardSub');
   if(scheduleSub){
     scheduleSub.textContent = next
-      ? `นัดถัดไป: ${formatDate(callDateTime(next))} · ${next.time} น. (${next.platform})`
+      ? `นัดถัดไป: ${formatDate(callDateTime(next))} · ${timeRange(next)} น. (${next.platform})`
       : 'ดูนัดถัดไปและตารางนัดทั้งหมด';
   }
 
@@ -995,9 +990,10 @@ function render(){
         <div class="ring"></div><div class="ring"></div><div class="ring"></div>
         <div class="icon-core">${iconSVG()}</div>
       </div>
-      <div class="empty">ยังไม่มีนัดคุยที่กำลังจะถึง<br>กดไอคอนเฟืองมุมขวาบนเพื่อตั้งเวลา</div>
+      <div class="empty">${calls.length ? 'หมดเวลาคุยแล้ว รอนัดครั้งใหม่' : 'ยังไม่มีนัดคุยที่กำลังจะถึง'}<br>กดไอคอนเฟืองมุมขวาบนเพื่อตั้งเวลา</div>
     `;
     if(tickHandle) clearInterval(tickHandle);
+    tickHandle = null;
     return;
   }
 
@@ -1009,9 +1005,9 @@ function render(){
       <div class="icon-core">${iconSVG()}</div>
     </div>
     <div class="headline">
-      <div class="eyebrow">นัดคุยครั้งต่อไป</div>
+      <div class="eyebrow" id="eyebrowText">นัดคุยครั้งต่อไป</div>
       <div class="title">${escapeHtml(next.platform)}</div>
-      <div class="subtitle">${formatDate(target)} · ${next.time} น.${next.note ? ' · '+escapeHtml(next.note) : ''}</div>
+      <div class="subtitle">${formatDate(target)} · ${timeRange(next)} น.${next.note ? ' · '+escapeHtml(next.note) : ''}</div>
     </div>
     <div class="clock" id="clockBox"></div>
     <a class="join" id="joinBtn" href="${next.link || '#'}" target="_blank" rel="noopener">
@@ -1028,8 +1024,8 @@ function render(){
   }
 
   if(tickHandle) clearInterval(tickHandle);
-  tickHandle = setInterval(()=>tick(target), 1000);
-  tick(target);
+  tickHandle = setInterval(tick, 1000);
+  tick();
 }
 
 function renderTable(){
@@ -1040,12 +1036,17 @@ function renderTable(){
     return;
   }
   const now = new Date();
+  const nextId = (getNextCall()||{}).id;
   wrap.innerHTML = sorted.map(c => {
     const dt = callDateTime(c);
-    const isPast = dt < now;
-    const tag = c.id === (getNextCall()||{}).id ? '<span class="row-tag">ถัดไป</span>' : (isPast ? '<span class="row-tag">ผ่านแล้ว</span>' : '');
+    const isPast = callEnd(c) <= now;
+    const isLive = !isPast && dt <= now;
+    let tag = '';
+    if(isLive) tag = '<span class="row-tag live">ON AIR</span>';
+    else if(c.id === nextId) tag = '<span class="row-tag">ถัดไป</span>';
+    else if(isPast) tag = '<span class="row-tag">ผ่านแล้ว</span>';
     const inner = `
-      <div class="row-dt">${formatDate(dt)}<br>${c.time} น.</div>
+      <div class="row-dt">${formatDate(dt)}<br>${timeRange(c)} น.</div>
       <div class="row-mid">
         <div class="row-platform">${escapeHtml(c.platform)}</div>
         ${c.note ? `<div class="row-note">${escapeHtml(c.note)}</div>` : ''}
@@ -1062,27 +1063,37 @@ function renderTable(){
   }).join('');
 }
 
-function tick(target){
-  const now = new Date();
-  let diff = Math.floor((target - now)/1000);
+// 3 ช่วง: ก่อนเริ่ม (STANDBY นับถอยหลังไปเวลาเริ่ม) → ระหว่างนัด (ON AIR นับถอยหลังไปเวลาเลิก) → หลังเลิก (กลับ STANDBY)
+function tick(){
+  const next = getNextCall();
   const box = document.getElementById('clockBox');
-  if(!box) return;
+  if(!next || !box) return;
 
-  if(diff <= 0){
-    onairBadge.classList.add('live');
-    onairText.textContent = 'ON AIR';
-    box.innerHTML = `<div class="seg"><div class="num">คุย</div><div class="lab">อยู่!</div></div>`;
+  const now = new Date();
+  const start = callDateTime(next);
+  const end = callEnd(next);
+
+  if(now >= end){
+    render();
+    renderTable();
     return;
   }
-  onairBadge.classList.remove('live');
-  onairText.textContent = 'STANDBY';
+
+  const live = now >= start;
+  let diff = Math.floor(((live ? end : start) - now)/1000);
+
+  onairBadge.classList.toggle('live', live);
+  onairText.textContent = live ? 'ON AIR' : 'STANDBY';
+  box.classList.toggle('live', live);
+  const eyebrow = document.getElementById('eyebrowText');
+  if(eyebrow) eyebrow.textContent = live ? 'กำลังคุยอยู่ · เหลืออีก' : 'นัดคุยครั้งต่อไป';
 
   const d = Math.floor(diff/86400); diff -= d*86400;
   const h = Math.floor(diff/3600); diff -= h*3600;
   const m = Math.floor(diff/60); diff -= m*60;
   const s = diff;
 
-  box.innerHTML = seg(d,'วัน') + seg(h,'ชม.') + seg(m,'นาที') + seg(s,'วินาที');
+  box.innerHTML = (live ? '' : seg(d,'วัน')) + seg(h,'ชม.') + seg(m,'นาที') + seg(s,'วินาที');
 }
 function seg(v, label){
   return `<div class="seg"><div class="num">${String(v).padStart(2,'0')}</div><div class="lab">${label}</div></div>`;
@@ -1100,11 +1111,9 @@ function escapeHtml(s){
 
 function normalizeLoadedData(parsed){
   if(Array.isArray(parsed)){
-    // เติม id ให้แถวเก่าที่อาจไม่มี id
     return parsed.map(c => c.id ? c : { ...c, id: newId() });
   }
   if(parsed && parsed.date && parsed.time){
-    // ข้อมูลรูปแบบเก่า (นัดเดียว) — แปลงเป็นรายการ 1 แถว
     return [{ ...parsed, id: newId() }];
   }
   return [];
@@ -1117,7 +1126,6 @@ async function loadCalls(){
     render();
     renderTable();
   }catch(e){
-    // ยังไม่เคยมีนัด หรือซิงก์รอบนี้พลาด — คงของเดิมในเครื่องไว้ก่อน
     render();
     renderTable();
   }
@@ -1182,7 +1190,6 @@ function refreshRequestDependentViews(){
     renderRequestStatus();
   }
 
-  // อัปเดตข้อความใต้ปุ่ม "นัดคอล" ที่หน้าแรก ให้รู้สถานะคำขอของตัวเองแบบคร่าวๆ
   const sub = document.getElementById('requestCardSub');
   if(sub){
     const id = localStorage.getItem(MY_REQUEST_ID_KEY);
@@ -1238,6 +1245,7 @@ function openApproveForm(reqId){
   document.getElementById('formTitle').textContent = 'อนุมัตินัด: ' + (r.requester || '');
   document.getElementById('fDate').value = r.date;
   document.getElementById('fTime').value = r.time;
+  document.getElementById('fTimeEnd').value = r.timeEnd || '';
   document.getElementById('fPlatform').value = r.platform;
   document.getElementById('fLink').value = '';
   document.getElementById('fNote').value = r.note || '';
@@ -1249,19 +1257,19 @@ function openApproveForm(reqId){
 function showManageTab(tab){
   const scheduleBtn = document.getElementById('tabScheduleBtn');
   const requestsBtn = document.getElementById('tabRequestsBtn');
-  const scheduleView = document.getElementById('manageScheduleView');
-  const requestsView = document.getElementById('manageRequestsView');
+  const scheduleTab = document.getElementById('manageScheduleView');
+  const requestsTab = document.getElementById('manageRequestsView');
   if(tab === 'requests'){
     scheduleBtn.classList.remove('active');
     requestsBtn.classList.add('active');
-    scheduleView.style.display = 'none';
-    requestsView.style.display = 'block';
+    scheduleTab.style.display = 'none';
+    requestsTab.style.display = 'block';
     renderManageRequests();
   }else{
     requestsBtn.classList.remove('active');
     scheduleBtn.classList.add('active');
-    requestsView.style.display = 'none';
-    scheduleView.style.display = 'block';
+    requestsTab.style.display = 'none';
+    scheduleTab.style.display = 'block';
     renderManageList();
   }
 }
@@ -1348,19 +1356,24 @@ document.getElementById('formBackBtn').addEventListener('click', ()=>{
 document.getElementById('saveBtn').addEventListener('click', async ()=>{
   const date = document.getElementById('fDate').value;
   const time = document.getElementById('fTime').value;
+  const timeEnd = document.getElementById('fTimeEnd').value;
   const platform = document.getElementById('fPlatform').value;
   const link = PLATFORM_LINKS[platform] || document.getElementById('fLink').value.trim();
   const note = document.getElementById('fNote').value.trim();
 
   if(!date || !time){
-    showToast('กรุณาใส่วันที่และเวลา');
+    showToast('กรุณาใส่วันที่และเวลาเริ่ม');
+    return;
+  }
+  if(timeEnd && timeEnd <= time){
+    showToast('เวลาเลิกต้องอยู่หลังเวลาเริ่ม');
     return;
   }
 
   if(editingId){
-    calls = calls.map(c => c.id === editingId ? { ...c, date, time, platform, link, note } : c);
+    calls = calls.map(c => c.id === editingId ? { ...c, date, time, timeEnd, platform, link, note } : c);
   }else{
-    calls.push({ id: newId(), date, time, platform, link, note });
+    calls.push({ id: newId(), date, time, timeEnd, platform, link, note });
   }
 
   render();
@@ -1432,8 +1445,8 @@ document.getElementById('requestAgainBtn').addEventListener('click', ()=>{
 
 showScreen('home');
 loadCalls();
-loadRequests(); // อัปเดตข้อความใต้ปุ่ม "นัดคอล" ที่หน้าแรกให้รู้สถานะคำขอล่าสุดของตัวเอง (ไม่เด้งออกจากหน้าแรกอัตโนมัติ)
-setInterval(()=>{ loadCalls(); loadRequests(); }, 8000); // sync กับเพื่อนคนอื่นที่อาจแก้ไขนัด/คำขอ (โหมด Firebase/localStorage เช็คทุก 8 วิ)
+loadRequests();
+setInterval(()=>{ loadCalls(); loadRequests(); }, 8000);
 
 const sharedNoteEl = document.getElementById('sharedNote');
 if(sharedNoteEl){
