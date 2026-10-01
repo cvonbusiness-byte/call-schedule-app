@@ -1370,15 +1370,18 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
     return;
   }
 
+  let savedId = editingId;
   if(editingId){
     calls = calls.map(c => c.id === editingId ? { ...c, date, time, timeEnd, platform, link, note } : c);
   }else{
-    calls.push({ id: newId(), date, time, timeEnd, platform, link, note });
+    savedId = newId();
+    calls.push({ id: savedId, date, time, timeEnd, platform, link, note });
   }
 
   render();
   renderTable();
   const ok = await persistCalls();
+  if(ok) notifyLine(savedId);
 
   if(approvingRequestId){
     requests = requests.map(r => r.id === approvingRequestId ? { ...r, status: 'approved' } : r);
@@ -1389,6 +1392,16 @@ document.getElementById('saveBtn').addEventListener('click', async ()=>{
   showManageList('schedule');
   if(ok) showToast(editingId ? 'แก้ไขนัดแล้ว' : 'เพิ่มนัดแล้ว');
 });
+
+// ===== แจ้งเข้า LINE ทันทีที่บันทึกนัด =====
+const NOTIFY_URL = 'https://incomparable-blancmange-f8d3a3.netlify.app/.netlify/functions/notify-new';
+function notifyLine(id){
+  fetch(NOTIFY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id })
+  }).catch(e => console.error('notify failed', e));
+}
 
 // ===== นำทางหน้าแรก / ตารางนัดคอล / นัดคอล =====
 document.getElementById('goScheduleBtn').addEventListener('click', ()=>{
