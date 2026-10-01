@@ -1,5 +1,5 @@
-// ฟังก์ชันนี้ต้องถูก "ปลุก" ทุก 1 นาทีโดยบริการ cron ภายนอก (เช่น cron-job.org)
-// หน้าที่: เช็คว่ามีนัดไหนใกล้ถึงใน 5 นาทีข้างหน้าไหม ถ้ามีและยังไม่เคยแจ้ง -> ส่งข้อความเข้ากลุ่ม LINE
+// ถูกเรียกทุก 1 นาทีโดย cron-job.org
+// เช็คว่ามีนัดใกล้ถึงใน 5 นาทีไหม ถ้ามีและยังไม่เคยแจ้ง -> ส่งเข้ากลุ่ม LINE
 const admin = require('firebase-admin');
 
 if (!admin.apps.length) {
@@ -14,7 +14,7 @@ exports.handler = async () => {
     const configDoc = await db.collection('callScheduleApp').doc('config').get();
     const groupId = configDoc.exists ? configDoc.data().groupId : null;
     if (!groupId) {
-      return { statusCode: 200, body: 'ยังไม่มี Group ID (รอบอทถูกเชิญเข้ากลุ่มและมีคนพิมพ์ในกลุ่มก่อน)' };
+      return { statusCode: 200, body: 'ยังไม่มี Group ID (เชิญบอทเข้ากลุ่มแล้วพิมพ์ข้อความในกลุ่มก่อน)' };
     }
 
     const scheduleDoc = await db.collection('callScheduleApp').doc('call-schedule').get();
@@ -28,7 +28,7 @@ exports.handler = async () => {
     let sentCount = 0;
 
     for (const c of calls) {
-      // +07:00 = เวลาไทย (เพราะเซิร์ฟเวอร์ Netlify ใช้เวลา UTC)
+      // +07:00 = เวลาไทย (เซิร์ฟเวอร์ Netlify ใช้ UTC)
       const start = new Date(`${c.date}T${c.time}:00+07:00`);
 
       if (start > now && start <= in5min) {
@@ -36,7 +36,7 @@ exports.handler = async () => {
         const notifiedSnap = await notifiedRef.get();
         if (notifiedSnap.exists) continue;
 
-        await fetch('https://api.line.me/v2/bot/message/push', {
+        const res = await fetch('https://api.line.me/v2/bot/message/push', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -50,6 +50,12 @@ exports.handler = async () => {
             }]
           })
         });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error('LINE push failed', res.status, errText);
+          return { statusCode: 500, body: `LINE error ${res.status}: ${errText}` };
+        }
 
         await notifiedRef.set({ notifiedAt: Date.now() });
         sentCount++;
