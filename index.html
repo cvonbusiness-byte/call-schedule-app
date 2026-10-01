@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>นัดโทร · ON AIR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Firebase (ใช้เมื่อดาวน์โหลดไฟล์ไปโฮสต์เอง เพื่อให้ทุกคนเห็นนัดเดียวกันไม่ว่าเปิดจากเครื่องไหน) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg:#0a0a14;
+    --panel:#12121f;
+    --panel-2:#181828;
+    --pink:#ff3cac;
+    --cyan:#00f0ff;
+    --violet:#7b2ff7;
+    --gold:#ffd23f;
+    --text:#f2f0ff;
+    --muted:#8b8aa8;
+    --line:#26263c;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(123,47,247,0.25), transparent 60%),
+      radial-gradient(1000px 500px at 85% 110%, rgba(0,240,255,0.15), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .stage{
+    width:100%;
+    max-width:460px;
+  }
+  .card{
+    position:relative;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:32px 28px 28px;
+    overflow:hidden;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .card::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:28px;
+  }
+  .onair{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.14em;
+    padding:6px 12px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    color:var(--muted);
+    transition:all .4s ease;
+  }
+  .onair .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--muted);
+    transition:all .4s ease;
+  }
+  .onair.live{
+    color:var(--gold);
+    border-color:rgba(255,210,63,0.4);
+    box-shadow:0 0 18px rgba(255,210,63,0.25);
+  }
+  .onair.live .dot{
+    background:var(--gold);
+    box-shadow:0 0 10px var(--gold);
+    animation:blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink{50%{opacity:0.25;}}
+
+  .gear{
+    width:34px;height:34px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .gear:hover{color:var(--text);border-color:var(--cyan);}
+
+  .radar{
+    position:relative;
+    width:140px;height:140px;
+    margin:4px auto 22px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ring{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    border:1px solid var(--cyan);
+    opacity:0;
+    animation:pulse 3s ease-out infinite;
+  }
+  .ring:nth-child(2){animation-delay:1s;}
+  .ring:nth-child(3){animation-delay:2s;}
+  @keyframes pulse{
+    0%{transform:scale(0.35);opacity:0.55;}
+    100%{transform:scale(1);opacity:0;}
+  }
+  .icon-core{
+    position:relative;
+    width:76px;height:76px;
+    border-radius:50%;
+    background:linear-gradient(145deg, var(--violet), var(--pink));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 40px rgba(255,60,172,0.45);
+  }
+  .icon-core svg{width:34px;height:34px;color:#fff;}
+
+  .headline{text-align:center;margin-bottom:4px;}
+  .eyebrow{
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .title{
+    font-size:22px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:14px;
+    margin-bottom:22px;
+  }
+
+  .clock{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:24px;
+  }
+  .clock .seg{
+    background:rgba(0,0,0,0.35);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:10px 6px;
+    min-width:58px;
+    text-align:center;
+  }
+  .clock .num{
+    font-family:'Orbitron', sans-serif;
+    font-size:22px;
+    font-weight:700;
+    color:var(--cyan);
+    text-shadow:0 0 12px rgba(0,240,255,0.5);
+  }
+  .clock .lab{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:0.08em;
+    margin-top:2px;
+  }
+
+  .join{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(90deg, var(--pink), var(--violet));
+    color:#fff;
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+    box-shadow:0 10px 30px rgba(123,47,247,0.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .join:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(123,47,247,0.5);}
+  .join:active{transform:translateY(0);}
+  .join.disabled{
+    background:var(--panel-2);
+    color:var(--muted);
+    box-shadow:none;
+    cursor:not-allowed;
+    pointer-events:none;
+    border:1px dashed var(--line);
+  }
+
+  .empty{
+    text-align:center;
+    padding:30px 10px 10px;
+    color:var(--muted);
+    font-size:14px;
+    line-height:1.6;
+  }
+
+  /* Edit panel */
+  .edit-overlay{
+    position:fixed;inset:0;
+    background:rgba(5,5,10,0.72);
+    backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    z-index:20;
+  }
+  .edit-panel{
+    width:100%;max-width:400px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:26px;
+  }
+  .edit-panel h2{
+    font-size:16px;
+    margin:0 0 4px;
+    font-family:'Orbitron', sans-serif;
+    letter-spacing:0.04em;
+  }
+  .edit-panel .hint{
+    color:var(--muted);
+    font-size:12.5px;
+    margin-bottom:20px;
+  }
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:11px 12px;
+    background:rgba(0,0,0,0.3);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--cyan);}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .btnrow{display:flex;gap:10px;margin-top:22px;}
+  .btn{
+    flex:1;
+    padding:12px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--text);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .btn.primary{
+    border:none;
+    background:linear-gradient(90deg, var(--cyan), var(--violet));
+    color:#0a0a14;
+  }
+  .btn.danger{color:var(--pink);border-color:rgba(255,60,172,0.3);}
+
+  .shared-note{
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    margin-top:16px;
+    opacity:0.8;
+  }
+
+  /* ตารางนัดคอล (public) */
+  .table-section{
+    margin-top:26px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .table-title{
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:var(--muted);
+    margin-bottom:12px;
+  }
+  .row-list{display:flex;flex-direction:column;gap:8px;}
+  .row-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 12px;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+    border-radius:12px;
+    text-decoration:none;
+    color:var(--text);
+    transition:border-color .15s ease;
+  }
+  a.row-item:hover{border-color:var(--cyan);}
+  .row-item.past{opacity:0.45;}
+  .row-dt{
+    font-family:'Orbitron', sans-serif;
+    font-size:12px;
+    color:var(--cyan);
+    min-width:84px;
+    line-height:1.3;
+  }
+  .row-item.past .row-dt{color:var(--muted);}
+  .row-mid{flex:1;min-width:0;}
+  .row-platform{font-size:13.5px;font-weight:600;}
+  .row-note{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .row-tag{
+    font-size:10px;
+    color:var(--muted);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:2px 8px;
+    flex-shrink:0;
+  }
+  .row-arrow{color:var(--muted);flex-shrink:0;}
+  a.row-item:hover .row-arrow{color:var(--cyan);}
+  .empty-table{
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+    padding:10px 0 2px;
+  }
+
+  /* Admin: manage list */
+  .manage-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+  .manage-row .info{flex:1;min-width:0;}
+  .manage-row .mp{font-size:13.5px;font-weight:600;}
+  .manage-row .md{font-size:11.5px;color:var(--muted);}
+  .icon-btn{
+    width:32px;height:32px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{color:var(--text);border-color:var(--cyan);}
+  .icon-btn.danger:hover{color:var(--pink);border-color:rgba(255,60,172,0.4);}
+  .manage-empty{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:18px 0;
+  }
+
+  /* ขอนัดคุย (public request) */
+  .request-btn{
+    display:block;
+    width:100%;
+    text-align:center;
+    margin-top:14px;
+    padding:13px;
+    border-radius:12px;
+    border:1px dashed var(--line);
+    background:transparent;
+    color:var(--text);
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .request-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  .status-view{text-align:center;padding:6px 2px;}
+  .status-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'Orbitron', sans-serif;
+    font-size:11px;font-weight:700;letter-spacing:0.12em;
+    padding:7px 14px;border-radius:999px;
+    border:1px solid var(--line);
+    color:var(--muted);
+    margin-bottom:18px;
+  }
+  .status-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+  .status-badge.pending{color:var(--gold);border-color:rgba(255,210,63,0.4);}
+  .status-badge.pending .dot{background:var(--gold);box-shadow:0 0 10px var(--gold);animation:blink 1.2s ease-in-out infinite;}
+  .status-badge.approved{color:#4bffa0;border-color:rgba(75,255,160,0.4);}
+  .status-badge.approved .dot{background:#4bffa0;box-shadow:0 0 10px #4bffa0;}
+  .status-badge.rejected{color:var(--pink);border-color:rgba(255,60,172,0.4);}
+  .status-badge.rejected .dot{background:var(--pink);}
+  .status-title{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .status-detail{color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:20px;}
+
+  /* Admin tabs */
+  .tabrow{display:flex;gap:8px;margin-bottom:18px;}
+  .tab-btn{
+    flex:1;
+    padding:9px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .tab-btn.active{
+    color:var(--text);
+    border-color:var(--cyan);
+    background:rgba(0,240,255,0.08);
+  }
+
+  .req-row{
+    padding:12px;
+    background:rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:8px;
+  }
+  .req-row .rp{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+  .req-row .rd{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .req-actions{display:flex;gap:8px;}
+  .req-actions .btn{padding:9px;font-size:12.5px;}
+
+  /* Home screen */
+  .backbtn{
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    padding:4px 2px;
+  }
+  .backbtn:hover{color:var(--cyan);}
+
+  .brand{text-align:center;margin-bottom:6px;}
+  .brand .icon-core{margin:0 auto 18px;}
+  .brand h1{
+    font-size:19px;
+    margin:0 0 6px;
+  }
+  .brand .brand-sub{
+    color:var(--muted);
+    font-size:13px;
+    margin-bottom:28px;
+  }
+
+  .nav-cards{display:flex;flex-direction:column;gap:12px;}
+  .nav-card{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    width:100%;
+    padding:16px;
+    border-radius:16px;
+    border:1px solid var(--line);
+    background:rgba(0,0,0,0.22);
+    color:var(--text);
+    text-align:left;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+    transition:border-color .15s ease, transform .15s ease, background .15s ease;
+  }
+  .nav-card:hover{
+    border-color:var(--cyan);
+    transform:translateY(-2px);
+    background:rgba(0,240,255,0.06);
+  }
+  .nav-card .nc-icon{
+    flex-shrink:0;
+    width:48px;height:48px;
+    border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(145deg, var(--violet), var(--pink));
+    box-shadow:0 0 20px rgba(255,60,172,0.35);
+  }
+  .nav-card.alt .nc-icon{
+    background:linear-gradient(145deg, var(--cyan), var(--violet));
+    box-shadow:0 0 20px rgba(0,240,255,0.3);
+  }
+  .nav-card .nc-icon svg{width:22px;height:22px;color:#fff;}
+  .nav-card .nc-body{flex:1;min-width:0;}
+  .nav-card .nc-title{font-size:15px;font-weight:700;margin-bottom:3px;}
+  .nav-card .nc-sub{font-size:12px;color:var(--muted);line-height:1.5;}
+  .nav-card .nc-arrow{color:var(--muted);flex-shrink:0;}
+  .nav-card:hover .nc-arrow{color:var(--cyan);}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="card">
+    <div class="topbar">
+      <button class="backbtn" id="backBtn" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        กลับ
+      </button>
+      <div class="onair" id="onairBadge"><span class="dot"></span><span id="onairText">STANDBY</span></div>
+      <button class="gear" id="editBtn" title="แก้ไขนัด" aria-label="แก้ไขนัด">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9c.14.36.4.66.73.86.3.18.65.28 1 .28H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <!-- หน้าแรก: เลือกนัดคอล หรือ ตารางนัดคอล -->
+    <div id="homeView">
+      <div class="brand">
+        <div class="icon-core" style="width:64px;height:64px;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11a9 9 0 0118 0v6a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h2M3 11v3a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3"/></svg>
+        </div>
+        <h1>นัดโทร</h1>
+        <div class="brand-sub">เลือกสิ่งที่อยากทำด้านล่าง</div>
+      </div>
+
+      <div class="nav-cards">
+        <button class="nav-card alt" id="goScheduleBtn">
+          <div class="nc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <div class="nc-body">
+            <div class="nc-title">ตารางนัดคอล</div>
+            <div class="nc-sub" id="scheduleCardSub">ดูนัดถัดไปและตารางนัดทั้งหมด</div>
+          </div>
+          <span class="nc-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        </button>
+
+        <button class="nav-card" id="goRequestBtn">
+          <div class="nc-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11a9 9 0 0118 0v6a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h2M3 11v3a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3"/></svg>
+          </div>
+          <div class="nc-body">
+            <div class="nc-title">นัดคอล</div>
+            <div class="nc-sub" id="requestCardSub">ส่งคำขอนัดเวลาคุยกับแอดมิน</div>
+          </div>
+          <span class="nc-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- หน้าตารางนัดคอล -->
+    <div id="scheduleView" style="display:none;">
+      <div id="mainContent"></div>
+
+      <div class="table-section">
+        <div class="table-title">ตารางนัดคอลทั้งหมด</div>
+        <div class="row-list" id="scheduleTable"></div>
+      </div>
+    </div>
+
+    <!-- หน้านัดคอล (ฟอร์มขอนัด / สถานะ) -->
+    <div id="requestView" style="display:none;">
+      <div id="requestFormView">
+        <h2 style="text-align:center;">ขอนัดคุย</h2>
+        <div class="hint" style="text-align:center;">ส่งคำขอไปให้แอดมินตรวจสอบ แล้วรอผลได้ที่หน้านี้</div>
+
+        <div class="field">
+          <label>ชื่อของคุณ</label>
+          <input type="text" id="rName" placeholder="ชื่อ / ชื่อเล่น">
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>วันที่อยากนัด</label>
+            <input type="date" id="rDate">
+          </div>
+          <div class="field">
+            <label>เวลาเริ่ม</label>
+            <input type="time" id="rTime">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>เวลาเลิก (ไม่บังคับ)</label>
+          <input type="time" id="rTimeEnd">
+        </div>
+
+        <div class="field">
+          <label>อยากคุยผ่านแอปไหน</label>
+          <select id="rPlatform">
+            <option value="Discord">Discord</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Google Meet">Google Meet</option>
+            <option value="Zoom">Zoom</option>
+            <option value="Line">Line</option>
+            <option value="Messenger">Messenger</option>
+            <option value="FaceTime">FaceTime</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>อยากคุยเรื่องอะไร (ไม่บังคับ)</label>
+          <input type="text" id="rNote" placeholder="เช่น ปรึกษาเรื่องงาน">
+        </div>
+
+        <button class="join" id="requestSubmitBtn" style="margin-top:4px;">ส่งคำขอนัด</button>
+      </div>
+
+      <div id="requestStatusView" class="status-view" style="display:none;">
+        <div class="status-badge" id="rStatusBadge"><span class="dot"></span><span id="rStatusText">รออนุมัติ</span></div>
+        <div class="status-title" id="rStatusTitle">ส่งคำขอแล้ว</div>
+        <div class="status-detail" id="rStatusDetail"></div>
+        <button class="btn" id="requestAgainBtn" style="width:100%;">ส่งคำขอใหม่อีกครั้ง</button>
+      </div>
+    </div>
+
+    <div class="shared-note" id="sharedNote">ทุกคนดูนัดนี้ได้ · แก้ไขได้เฉพาะแอดมิน</div>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:#1c1c30;border:1px solid var(--line);color:var(--text);padding:12px 18px;
+  border-radius:12px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:50;max-width:90vw;text-align:center;"></div>
+
+<div class="edit-overlay" id="pinOverlay" style="display:none;">
+  <div class="edit-panel" style="max-width:320px;text-align:center;">
+    <h2>เข้าสู่โหมดแอดมิน</h2>
+    <div class="hint" id="pinHint">ใส่รหัสเพื่อตั้งนัด</div>
+    <div class="field">
+      <input type="password" id="pinInput" inputmode="numeric" placeholder="รหัสแอดมิน" autocomplete="off">
+    </div>
+    <div class="btnrow">
+      <button class="btn" id="pinCancelBtn">ยกเลิก</button>
+      <button class="btn primary" id="pinSubmitBtn">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</div>
+
+<div class="edit-overlay" id="editOverlay" style="display:none;">
+  <div class="edit-panel">
+
+    <!-- รายการนัดทั้งหมด (admin) -->
+    <div id="manageListView">
+      <h2>จัดการนัดคอล</h2>
+      <div class="tabrow">
+        <button class="tab-btn active" id="tabScheduleBtn">ตารางนัด</button>
+        <button class="tab-btn" id="tabRequestsBtn">คำขอนัด<span id="pendingCountBadge"></span></button>
+      </div>
+
+      <div id="manageScheduleView">
+        <div class="hint">เพิ่ม/แก้ไข/ลบนัดได้ — ทุกคนจะเห็นตารางนี้ทันที</div>
+        <div id="manageListItems"></div>
+        <div class="btnrow">
+          <button class="btn" id="closeManageBtn">ปิด</button>
+          <button class="btn primary" id="addNewBtn">+ เพิ่มนัดใหม่</button>
+        </div>
+      </div>
+
+      <div id="manageRequestsView" style="display:none;">
+        <div class="hint">อนุมัติเพื่อเพิ่มเข้าตารางนัด หรือปฏิเสธคำขอ</div>
+        <div id="manageRequestItems"></div>
+        <div class="btnrow">
+          <button class="btn" id="closeManageBtn2">ปิด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ฟอร์มเพิ่ม/แก้ไขนัดเดียว -->
+    <div id="manageFormView" style="display:none;">
+      <h2 id="formTitle">เพิ่มนัดใหม่</h2>
+      <div class="hint">กรอกวัน เวลา แอปที่ใช้คุย และลิงก์ห้อง</div>
+
+      <div class="row2">
+        <div class="field">
+          <label>วันที่</label>
+          <input type="date" id="fDate">
+        </div>
+        <div class="field">
+          <label>เวลา</label>
+          <input type="time" id="fTime">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>แพลตฟอร์ม</label>
+        <select id="fPlatform">
+          <option value="Discord">Discord</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Google Meet">Google Meet</option>
+          <option value="Zoom">Zoom</option>
+          <option value="Line">Line</option>
+          <option value="Messenger">Messenger</option>
+          <option value="FaceTime">FaceTime</option>
+          <option value="อื่นๆ">อื่นๆ</option>
+        </select>
+        <div class="hint" id="linkLockHint" style="margin:6px 0 0;display:none;">ลิงก์ของแอปนี้ถูกกำหนดตายตัว ไม่สามารถแก้ไขได้</div>
+      </div>
+
+      <div class="field">
+        <label>ลิงก์ห้อง / ลิงก์เข้าร่วม</label>
+        <input type="url" id="fLink" placeholder="https://...">
+      </div>
+
+      <div class="field">
+        <label>โน้ตเพิ่มเติม (ไม่บังคับ)</label>
+        <input type="text" id="fNote" placeholder="เช่น เอาหูฟังมาด้วย">
+      </div>
+
+      <div class="btnrow">
+        <button class="btn" id="formBackBtn">กลับ</button>
+        <button class="btn primary" id="saveBtn">บันทึกนัด</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'call-schedule';
+// รหัสแอดมิน — แก้ตรงนี้เพื่อเปลี่ยนรหัส (ใครเห็นซอร์สหน้านี้ก็เห็นรหัสได้ ไม่ใช่ระบบล็อกอินจริง แค่กันคนทั่วไปกดพลาด)
+const ADMIN_PIN = '123456';
+
+// ลิงก์ตายตัวสำหรับแพลตฟอร์มที่บังคับใช้ลิงก์เดียว (ห้ามพิมพ์ลิงก์อื่น) — แก้ลิงก์ได้ตรงนี้ที่เดียว
+const PLATFORM_LINKS = {
+  'Line': 'https://line.me/ti/g/XgXV6nawbU',
+  'Instagram': 'https://ig.me/j/AbZUK2CrP4Flw-DN/',
+  'Google Meet': 'https://meet.google.com/bmf-jqyh-rid',
+  'Discord': 'https://discord.gg/RxhVWKAF'
+};
+function syncLinkField(){
+  const platform = document.getElementById('fPlatform').value;
+  const linkInput = document.getElementById('fLink');
+  const hint = document.getElementById('linkLockHint');
+  if(PLATFORM_LINKS[platform]){
+    linkInput.value = PLATFORM_LINKS[platform];
+    linkInput.readOnly = true;
+    linkInput.style.opacity = '0.6';
+    linkInput.style.cursor = 'not-allowed';
+    if(hint) hint.style.display = 'block';
+  }else{
+    linkInput.readOnly = false;
+    linkInput.style.opacity = '1';
+    linkInput.style.cursor = 'text';
+    if(hint) hint.style.display = 'none';
+  }
+}
+
+// ===== เชื่อม Firebase (Firestore) โปรเจกต์เดียวกับที่ตั้งไว้ก่อนหน้า =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCHBg5NEAlL0-fjlxv5VvdJwKswd8_Hbjo",
+  authDomain: "call-schedule-72025.firebaseapp.com",
+  projectId: "call-schedule-72025",
+  storageBucket: "call-schedule-72025.firebasestorage.app",
+  messagingSenderId: "972416485326",
+  appId: "1:972416485326:web:eebfce3b45a036eed18d9f"
+};
+let db = null;
+let useFirebase = false;
+try{
+  if(firebaseConfig.apiKey && window.firebase){
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    useFirebase = true;
+  }
+}catch(e){
+  console.error('firebase init failed', e);
+}
+const FIRESTORE_COLLECTION = 'callScheduleApp'; // คนละ collection กับไฟล์เวอร์ชันเก่า กันข้อมูลชนกัน
+// ==========================================================================
+
+let calls = [];        // รายการนัดคอลทั้งหมด [{id,date,time,platform,link,note}]
+let editingId = null;  // id ของนัดที่กำลังแก้ไขในฟอร์ม, null = กำลังเพิ่มใหม่
+let tickHandle = null;
+let isAdmin = false; // ต้องใส่รหัสใหม่ทุกครั้งที่เปิดหน้านี้
+
+const REQUESTS_KEY = 'call-schedule-requests';
+const MY_REQUEST_ID_KEY = 'call-request-my-last-id'; // เก็บเฉพาะเครื่องนี้ ไว้จำว่าคำขอล่าสุดของตัวเองคืออันไหน
+let requests = [];          // คำขอนัดทั้งหมด [{id,requester,date,time,timeEnd,platform,note,status,createdAt}]
+let approvingRequestId = null; // ถ้าไม่ใช่ null = กำลังกดอนุมัติคำขอนี้อยู่ (ตอนบันทึกฟอร์มจะอัปเดตสถานะคำขอด้วย)
+
+function newId(){
+  return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+}
+function callDateTime(c){
+  return new Date(c.date + 'T' + c.time + ':00');
+}
+function getNextCall(){
+  const now = new Date();
+  return calls
+    .filter(c => callDateTime(c) >= now)
+    .sort((a,b) => callDateTime(a) - callDateTime(b))[0] || null;
+}
+function getSortedCalls(){
+  return [...calls].sort((a,b) => callDateTime(a) - callDateTime(b));
+}
+
+// ระบบเก็บข้อมูล เรียงลำดับความสำคัญ:
+// 1) window.storage — ใช้เมื่อเปิดผ่าน Claude artifact โดยตรง (ซิงก์ให้ทุกคนอัตโนมัติ)
+// 2) Firebase Firestore — ใช้ตอนดาวน์โหลดไปโฮสต์เอง (ซิงก์ข้ามเครื่อง/ข้ามคนได้จริง)
+// 3) localStorage — สำรองสุดท้าย เก็บเฉพาะเบราว์เซอร์เครื่องนี้เครื่องเดียว
+const hasCloudStorage = !!(window.storage && typeof window.storage.set === 'function');
+const storageMode = hasCloudStorage ? 'claude' : (useFirebase ? 'firebase' : 'local');
+
+const store = {
+  async get(key){
+    if(storageMode === 'claude') return window.storage.get(key, true);
+    if(storageMode === 'firebase'){
+      const doc = await db.collection(FIRESTORE_COLLECTION).doc(key).get();
+      if(!doc.exists || typeof doc.data().data !== 'string') throw new Error('not found');
+      return { key, value: doc.data().data, shared: true };
+    }
+    const raw = localStorage.getItem(key);
+    if(raw === null) throw new Error('not found');
+    return { key, value: raw, shared: true };
+  },
+  async set(key, value){
+    if(storageMode === 'claude') return window.storage.set(key, value, true);
+    if(storageMode === 'firebase'){
+      await db.collection(FIRESTORE_COLLECTION).doc(key).set({ data: value });
+      return { key, value, shared: true };
+    }
+    localStorage.setItem(key, value);
+    return { key, value, shared: true };
+  },
+  async delete(key){
+    if(storageMode === 'claude') return window.storage.delete(key, true);
+    if(storageMode === 'firebase'){
+      await db.collection(FIRESTORE_COLLECTION).doc(key).delete();
+      return { key, deleted: true, shared: true };
+    }
+    localStorage.removeItem(key);
+    return { key, deleted: true, shared: true };
+  }
+};
+
+const mainContent = document.getElementById('mainContent');
+const onairBadge = document.getElementById('onairBadge');
+const onairText = document.getElementById('onairText');
+const editOverlay = document.getElementById('editOverlay');
+const pinOverlay = document.getElementById('pinOverlay');
+const pinInput = document.getElementById('pinInput');
+const pinHint = document.getElementById('pinHint');
+const homeView = document.getElementById('homeView');
+const scheduleView = document.getElementById('scheduleView');
+const requestView = document.getElementById('requestView');
+const backBtn = document.getElementById('backBtn');
+let toastTimer = null;
+function showToast(msg, duration){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.display = 'none'; }, duration || 5000);
+}
+let formOrigin = 'schedule'; // 'schedule' หรือ 'requests' — ใช้ตอนกดกลับจากฟอร์ม
+
+function showScreen(name){
+  homeView.style.display = name === 'home' ? 'block' : 'none';
+  scheduleView.style.display = name === 'schedule' ? 'block' : 'none';
+  requestView.style.display = name === 'request' ? 'block' : 'none';
+  backBtn.style.display = name === 'home' ? 'none' : 'flex';
+}
+
+function enterRequestView(){
+  showScreen('request');
+  const id = localStorage.getItem(MY_REQUEST_ID_KEY);
+  const mine = id ? requests.find(r => r.id === id) : null;
+  if(mine){
+    document.getElementById('requestFormView').style.display = 'none';
+    document.getElementById('requestStatusView').style.display = 'block';
+    renderRequestStatus();
+  }else{
+    document.getElementById('requestFormView').style.display = 'block';
+    document.getElementById('requestStatusView').style.display = 'none';
+  }
+}
+
+function openEditPanel(){
+  showManageList('schedule');
+  editOverlay.style.display = 'flex';
+}
+
+function showManageList(tab){
+  document.getElementById('manageFormView').style.display = 'none';
+  document.getElementById('manageListView').style.display = 'block';
+  showManageTab(tab || 'schedule');
+}
+
+function renderManageList(){
+  const wrap = document.getElementById('manageListItems');
+  const sorted = getSortedCalls();
+  if(sorted.length === 0){
+    wrap.innerHTML = '<div class="manage-empty">ยังไม่มีนัดในตาราง กด "เพิ่มนัดใหม่" ด้านล่าง</div>';
+    return;
+  }
+  wrap.innerHTML = sorted.map(c => {
+    const dt = callDateTime(c);
+    const isPast = dt < new Date();
+    return `
+      <div class="manage-row">
+        <div class="info">
+          <div class="mp">${escapeHtml(c.platform)}</div>
+          <div class="md">${formatDate(dt)} · ${c.time} น.${isPast ? ' · ผ่านไปแล้ว' : ''}</div>
+        </div>
+        <button class="icon-btn" data-edit="${c.id}" title="แก้ไข">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn danger" data-delete="${c.id}" title="ลบ">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  wrap.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openForm(btn.getAttribute('data-edit')));
+  });
+  wrap.querySelectorAll('[data-delete]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-delete');
+      calls = calls.filter(c => c.id !== id);
+      await persistCalls();
+      renderManageList();
+      render();
+      renderTable();
+      showToast('ลบนัดแล้ว');
+    });
+  });
+}
+
+function openForm(id){
+  editingId = id || null;
+  approvingRequestId = null;
+  formOrigin = 'schedule';
+  const c = editingId ? calls.find(x => x.id === editingId) : null;
+  document.getElementById('formTitle').textContent = c ? 'แก้ไขนัด' : 'เพิ่มนัดใหม่';
+  document.getElementById('fDate').value = c ? c.date : '';
+  document.getElementById('fTime').value = c ? c.time : '';
+  document.getElementById('fPlatform').value = c ? c.platform : 'Discord';
+  document.getElementById('fLink').value = c ? c.link : '';
+  document.getElementById('fNote').value = c ? c.note : '';
+  syncLinkField();
+  document.getElementById('manageListView').style.display = 'none';
+  document.getElementById('manageFormView').style.display = 'block';
+}
+
+function iconSVG(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11a9 9 0 0118 0v6a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h2M3 11v3a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3"/></svg>';
+}
+
+function render(){
+  const next = getNextCall();
+
+  const scheduleSub = document.getElementById('scheduleCardSub');
+  if(scheduleSub){
+    scheduleSub.textContent = next
+      ? `นัดถัดไป: ${formatDate(callDateTime(next))} · ${next.time} น. (${next.platform})`
+      : 'ดูนัดถัดไปและตารางนัดทั้งหมด';
+  }
+
+  if(!next){
+    onairBadge.classList.remove('live');
+    onairText.textContent = 'STANDBY';
+    mainContent.innerHTML = `
+      <div class="radar">
+        <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+        <div class="icon-core">${iconSVG()}</div>
+      </div>
+      <div class="empty">ยังไม่มีนัดคุยที่กำลังจะถึง<br>กดไอคอนเฟืองมุมขวาบนเพื่อตั้งเวลา</div>
+    `;
+    if(tickHandle) clearInterval(tickHandle);
+    return;
+  }
+
+  const target = callDateTime(next);
+
+  mainContent.innerHTML = `
+    <div class="radar">
+      <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+      <div class="icon-core">${iconSVG()}</div>
+    </div>
+    <div class="headline">
+      <div class="eyebrow">นัดคุยครั้งต่อไป</div>
+      <div class="title">${escapeHtml(next.platform)}</div>
+      <div class="subtitle">${formatDate(target)} · ${next.time} น.${next.note ? ' · '+escapeHtml(next.note) : ''}</div>
+    </div>
+    <div class="clock" id="clockBox"></div>
+    <a class="join" id="joinBtn" href="${next.link || '#'}" target="_blank" rel="noopener">
+      เข้าร่วมผ่าน ${escapeHtml(next.platform)}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
+  `;
+
+  if(!next.link){
+    const j = document.getElementById('joinBtn');
+    j.classList.add('disabled');
+    j.textContent = 'ยังไม่ได้ใส่ลิงก์';
+    j.removeAttribute('href');
+  }
+
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(()=>tick(target), 1000);
+  tick(target);
+}
+
+function renderTable(){
+  const wrap = document.getElementById('scheduleTable');
+  const sorted = getSortedCalls();
+  if(sorted.length === 0){
+    wrap.innerHTML = '<div class="empty-table">ยังไม่มีนัดในตาราง</div>';
+    return;
+  }
+  const now = new Date();
+  wrap.innerHTML = sorted.map(c => {
+    const dt = callDateTime(c);
+    const isPast = dt < now;
+    const tag = c.id === (getNextCall()||{}).id ? '<span class="row-tag">ถัดไป</span>' : (isPast ? '<span class="row-tag">ผ่านแล้ว</span>' : '');
+    const inner = `
+      <div class="row-dt">${formatDate(dt)}<br>${c.time} น.</div>
+      <div class="row-mid">
+        <div class="row-platform">${escapeHtml(c.platform)}</div>
+        ${c.note ? `<div class="row-note">${escapeHtml(c.note)}</div>` : ''}
+      </div>
+      ${tag}
+      <span class="row-arrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </span>
+    `;
+    if(c.link){
+      return `<a class="row-item${isPast?' past':''}" href="${c.link}" target="_blank" rel="noopener">${inner}</a>`;
+    }
+    return `<div class="row-item${isPast?' past':''}">${inner}</div>`;
+  }).join('');
+}
+
+function tick(target){
+  const now = new Date();
+  let diff = Math.floor((target - now)/1000);
+  const box = document.getElementById('clockBox');
+  if(!box) return;
+
+  if(diff <= 0){
+    onairBadge.classList.add('live');
+    onairText.textContent = 'ON AIR';
+    box.innerHTML = `<div class="seg"><div class="num">คุย</div><div class="lab">อยู่!</div></div>`;
+    return;
+  }
+  onairBadge.classList.remove('live');
+  onairText.textContent = 'STANDBY';
+
+  const d = Math.floor(diff/86400); diff -= d*86400;
+  const h = Math.floor(diff/3600); diff -= h*3600;
+  const m = Math.floor(diff/60); diff -= m*60;
+  const s = diff;
+
+  box.innerHTML = seg(d,'วัน') + seg(h,'ชม.') + seg(m,'นาที') + seg(s,'วินาที');
+}
+function seg(v, label){
+  return `<div class="seg"><div class="num">${String(v).padStart(2,'0')}</div><div class="lab">${label}</div></div>`;
+}
+function formatDate(d){
+  const days = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+  const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+function escapeHtml(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function normalizeLoadedData(parsed){
+  if(Array.isArray(parsed)){
+    // เติม id ให้แถวเก่าที่อาจไม่มี id
+    return parsed.map(c => c.id ? c : { ...c, id: newId() });
+  }
+  if(parsed && parsed.date && parsed.time){
+    // ข้อมูลรูปแบบเก่า (นัดเดียว) — แปลงเป็นรายการ 1 แถว
+    return [{ ...parsed, id: newId() }];
+  }
+  return [];
+}
+
+async function loadCalls(){
+  try{
+    const res = await store.get(STORAGE_KEY);
+    calls = res ? normalizeLoadedData(JSON.parse(res.value)) : [];
+    render();
+    renderTable();
+  }catch(e){
+    // ยังไม่เคยมีนัด หรือซิงก์รอบนี้พลาด — คงของเดิมในเครื่องไว้ก่อน
+    render();
+    renderTable();
+  }
+}
+
+async function persistCalls(){
+  try{
+    const result = await store.set(STORAGE_KEY, JSON.stringify(calls));
+    if(!result){
+      showToast('⚠️ บันทึกไม่สำเร็จ (storage คืนค่าว่าง) — ลองอีกครั้ง');
+      return false;
+    }
+    if(storageMode === 'local'){
+      showToast('บันทึกแล้ว (เก็บไว้ในเบราว์เซอร์นี้เครื่องเดียว ไม่ซิงก์กับเพื่อนคนอื่น)', 6000);
+    }
+    return true;
+  }catch(e){
+    console.error('save failed', e);
+    showToast('⚠️ บันทึกไม่สำเร็จ: ' + (e && e.message ? e.message : 'ไม่ทราบสาเหตุ'));
+    return false;
+  }
+}
+
+function normalizeRequests(parsed){
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+async function loadRequests(){
+  try{
+    const res = await store.get(REQUESTS_KEY);
+    requests = res ? normalizeRequests(JSON.parse(res.value)) : [];
+  }catch(e){
+    // ยังไม่เคยมีคำขอ หรือซิงก์รอบนี้พลาด — คงของเดิมไว้ก่อน
+  }
+  refreshRequestDependentViews();
+}
+
+async function persistRequests(){
+  try{
+    const result = await store.set(REQUESTS_KEY, JSON.stringify(requests));
+    if(!result){
+      showToast('⚠️ บันทึกคำขอไม่สำเร็จ — ลองอีกครั้ง');
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.error('save requests failed', e);
+    showToast('⚠️ บันทึกคำขอไม่สำเร็จ: ' + (e && e.message ? e.message : 'ไม่ทราบสาเหตุ'));
+    return false;
+  }
+}
+
+function refreshRequestDependentViews(){
+  const pending = requests.filter(r => r.status === 'pending');
+  const badge = document.getElementById('pendingCountBadge');
+  if(badge) badge.textContent = pending.length ? ` (${pending.length})` : '';
+
+  if(document.getElementById('manageRequestsView').style.display !== 'none' && editOverlay.style.display === 'flex'){
+    renderManageRequests();
+  }
+  if(requestView.style.display !== 'none' && document.getElementById('requestStatusView').style.display !== 'none'){
+    renderRequestStatus();
+  }
+
+  // อัปเดตข้อความใต้ปุ่ม "นัดคอล" ที่หน้าแรก ให้รู้สถานะคำขอของตัวเองแบบคร่าวๆ
+  const sub = document.getElementById('requestCardSub');
+  if(sub){
+    const id = localStorage.getItem(MY_REQUEST_ID_KEY);
+    const mine = id ? requests.find(r => r.id === id) : null;
+    if(mine && mine.status === 'pending') sub.textContent = 'คำขอของคุณกำลังรออนุมัติ';
+    else if(mine && mine.status === 'approved') sub.textContent = 'คำขอของคุณได้รับการอนุมัติแล้ว 🎉';
+    else if(mine && mine.status === 'rejected') sub.textContent = 'คำขอก่อนหน้านี้ไม่ผ่าน ลองส่งใหม่ได้';
+    else sub.textContent = 'ส่งคำขอนัดเวลาคุยกับแอดมิน';
+  }
+}
+
+function renderManageRequests(){
+  const wrap = document.getElementById('manageRequestItems');
+  const pending = requests.filter(r => r.status === 'pending').sort((a,b) => a.createdAt - b.createdAt);
+  if(pending.length === 0){
+    wrap.innerHTML = '<div class="manage-empty">ยังไม่มีคำขอนัดใหม่</div>';
+    return;
+  }
+  wrap.innerHTML = pending.map(r => {
+    const when = `${r.date} · ${r.timeEnd ? (r.time+'–'+r.timeEnd) : r.time} น.`;
+    return `
+      <div class="req-row">
+        <div class="rp">${escapeHtml(r.requester || 'ไม่ระบุชื่อ')} · ${escapeHtml(r.platform)}</div>
+        <div class="rd">${when}${r.note ? ' · '+escapeHtml(r.note) : ''}</div>
+        <div class="req-actions">
+          <button class="btn danger" data-reject="${r.id}">ปฏิเสธ</button>
+          <button class="btn primary" data-approve="${r.id}">อนุมัติ</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  wrap.querySelectorAll('[data-approve]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openApproveForm(btn.getAttribute('data-approve')));
+  });
+  wrap.querySelectorAll('[data-reject]').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-reject');
+      requests = requests.map(r => r.id === id ? { ...r, status: 'rejected' } : r);
+      await persistRequests();
+      renderManageRequests();
+      showToast('ปฏิเสธคำขอแล้ว');
+    });
+  });
+}
+
+function openApproveForm(reqId){
+  const r = requests.find(x => x.id === reqId);
+  if(!r) return;
+  approvingRequestId = reqId;
+  editingId = null;
+  formOrigin = 'requests';
+  document.getElementById('formTitle').textContent = 'อนุมัตินัด: ' + (r.requester || '');
+  document.getElementById('fDate').value = r.date;
+  document.getElementById('fTime').value = r.time;
+  document.getElementById('fPlatform').value = r.platform;
+  document.getElementById('fLink').value = '';
+  document.getElementById('fNote').value = r.note || '';
+  syncLinkField();
+  document.getElementById('manageListView').style.display = 'none';
+  document.getElementById('manageFormView').style.display = 'block';
+}
+
+function showManageTab(tab){
+  const scheduleBtn = document.getElementById('tabScheduleBtn');
+  const requestsBtn = document.getElementById('tabRequestsBtn');
+  const scheduleView = document.getElementById('manageScheduleView');
+  const requestsView = document.getElementById('manageRequestsView');
+  if(tab === 'requests'){
+    scheduleBtn.classList.remove('active');
+    requestsBtn.classList.add('active');
+    scheduleView.style.display = 'none';
+    requestsView.style.display = 'block';
+    renderManageRequests();
+  }else{
+    requestsBtn.classList.remove('active');
+    scheduleBtn.classList.add('active');
+    requestsView.style.display = 'none';
+    scheduleView.style.display = 'block';
+    renderManageList();
+  }
+}
+
+function renderRequestStatus(){
+  const id = localStorage.getItem(MY_REQUEST_ID_KEY);
+  const r = requests.find(x => x.id === id);
+  const badge = document.getElementById('rStatusBadge');
+  const text = document.getElementById('rStatusText');
+  const title = document.getElementById('rStatusTitle');
+  const detail = document.getElementById('rStatusDetail');
+
+  if(!r){
+    badge.className = 'status-badge';
+    text.textContent = 'ไม่พบข้อมูล';
+    title.textContent = 'ไม่พบคำขอนี้แล้ว';
+    detail.textContent = 'อาจถูกลบหรือยังไม่บันทึกสำเร็จ ลองส่งคำขอใหม่อีกครั้ง';
+    return;
+  }
+  const when = `${r.date} · ${r.timeEnd ? (r.time+'–'+r.timeEnd) : r.time} น.`;
+  if(r.status === 'approved'){
+    badge.className = 'status-badge approved';
+    text.textContent = 'อนุมัติแล้ว';
+    title.textContent = 'นัดของคุณได้รับการยืนยันแล้ว 🎉';
+    detail.textContent = `${when} ผ่าน ${r.platform} — ดูลิงก์เข้าร่วมได้ที่ตารางนัดคอลด้านนอก`;
+  }else if(r.status === 'rejected'){
+    badge.className = 'status-badge rejected';
+    text.textContent = 'ไม่สามารถนัดได้';
+    title.textContent = 'ขอโทษด้วย รอบนี้ติดขัด';
+    detail.textContent = 'ลองส่งคำขอใหม่ในวัน/เวลาอื่นดูนะ';
+  }else{
+    badge.className = 'status-badge pending';
+    text.textContent = 'รออนุมัติ';
+    title.textContent = 'ส่งคำขอแล้ว รอแอดมินตรวจสอบ';
+    detail.textContent = `${when} ผ่าน ${r.platform} — หน้านี้จะอัปเดตสถานะให้อัตโนมัติ`;
+  }
+}
+
+document.getElementById('editBtn').addEventListener('click', ()=>{
+  if(isAdmin){
+    openEditPanel();
+    return;
+  }
+  pinHint.textContent = 'ใส่รหัสเพื่อตั้งนัด';
+  pinInput.value = '';
+  pinOverlay.style.display = 'flex';
+  setTimeout(()=>pinInput.focus(), 50);
+});
+document.getElementById('pinCancelBtn').addEventListener('click', ()=>{
+  pinOverlay.style.display = 'none';
+});
+function submitPin(){
+  if(pinInput.value === ADMIN_PIN){
+    isAdmin = true;
+    pinOverlay.style.display = 'none';
+    openEditPanel();
+  }else{
+    pinHint.textContent = 'รหัสไม่ถูกต้อง ลองอีกครั้ง';
+    pinInput.value = '';
+    pinInput.focus();
+  }
+}
+document.getElementById('pinSubmitBtn').addEventListener('click', submitPin);
+pinInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') submitPin();
+});
+document.getElementById('fPlatform').addEventListener('change', syncLinkField);
+
+document.getElementById('closeManageBtn').addEventListener('click', ()=>{
+  editOverlay.style.display = 'none';
+});
+document.getElementById('closeManageBtn2').addEventListener('click', ()=>{
+  editOverlay.style.display = 'none';
+});
+document.getElementById('addNewBtn').addEventListener('click', ()=>{
+  openForm(null);
+});
+document.getElementById('tabScheduleBtn').addEventListener('click', ()=> showManageTab('schedule'));
+document.getElementById('tabRequestsBtn').addEventListener('click', ()=> showManageTab('requests'));
+document.getElementById('formBackBtn').addEventListener('click', ()=>{
+  approvingRequestId = null;
+  showManageList(formOrigin);
+});
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const date = document.getElementById('fDate').value;
+  const time = document.getElementById('fTime').value;
+  const platform = document.getElementById('fPlatform').value;
+  const link = PLATFORM_LINKS[platform] || document.getElementById('fLink').value.trim();
+  const note = document.getElementById('fNote').value.trim();
+
+  if(!date || !time){
+    showToast('กรุณาใส่วันที่และเวลา');
+    return;
+  }
+
+  if(editingId){
+    calls = calls.map(c => c.id === editingId ? { ...c, date, time, platform, link, note } : c);
+  }else{
+    calls.push({ id: newId(), date, time, platform, link, note });
+  }
+
+  render();
+  renderTable();
+  const ok = await persistCalls();
+
+  if(approvingRequestId){
+    requests = requests.map(r => r.id === approvingRequestId ? { ...r, status: 'approved' } : r);
+    await persistRequests();
+    approvingRequestId = null;
+  }
+
+  showManageList('schedule');
+  if(ok) showToast(editingId ? 'แก้ไขนัดแล้ว' : 'เพิ่มนัดแล้ว');
+});
+
+// ===== นำทางหน้าแรก / ตารางนัดคอล / นัดคอล =====
+document.getElementById('goScheduleBtn').addEventListener('click', ()=>{
+  showScreen('schedule');
+});
+document.getElementById('goRequestBtn').addEventListener('click', ()=>{
+  enterRequestView();
+});
+backBtn.addEventListener('click', ()=>{
+  showScreen('home');
+});
+
+// ===== ฟอร์มขอนัด (public) =====
+document.getElementById('requestSubmitBtn').addEventListener('click', async ()=>{
+  const requester = document.getElementById('rName').value.trim();
+  const date = document.getElementById('rDate').value;
+  const time = document.getElementById('rTime').value;
+  const timeEnd = document.getElementById('rTimeEnd').value;
+  const platform = document.getElementById('rPlatform').value;
+  const note = document.getElementById('rNote').value.trim();
+
+  if(!requester){ showToast('กรุณาใส่ชื่อของคุณ'); return; }
+  if(!date || !time){ showToast('กรุณาใส่วันที่และเวลา'); return; }
+  if(timeEnd && timeEnd <= time){ showToast('เวลาเลิกต้องอยู่หลังเวลาเริ่ม'); return; }
+
+  const btn = document.getElementById('requestSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังส่ง...';
+  try{
+    const id = newId();
+    requests.push({ id, requester, date, time, timeEnd, platform, note, status: 'pending', createdAt: Date.now() });
+    const ok = await persistRequests();
+    if(ok){
+      localStorage.setItem(MY_REQUEST_ID_KEY, id);
+      document.getElementById('requestFormView').style.display = 'none';
+      document.getElementById('requestStatusView').style.display = 'block';
+      renderRequestStatus();
+    }
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'ส่งคำขอนัด';
+  }
+});
+document.getElementById('requestAgainBtn').addEventListener('click', ()=>{
+  localStorage.removeItem(MY_REQUEST_ID_KEY);
+  document.getElementById('rName').value = '';
+  document.getElementById('rDate').value = '';
+  document.getElementById('rTime').value = '';
+  document.getElementById('rTimeEnd').value = '';
+  document.getElementById('rNote').value = '';
+  document.getElementById('requestStatusView').style.display = 'none';
+  document.getElementById('requestFormView').style.display = 'block';
+});
+
+showScreen('home');
+loadCalls();
+loadRequests(); // อัปเดตข้อความใต้ปุ่ม "นัดคอล" ที่หน้าแรกให้รู้สถานะคำขอล่าสุดของตัวเอง (ไม่เด้งออกจากหน้าแรกอัตโนมัติ)
+setInterval(()=>{ loadCalls(); loadRequests(); }, 8000); // sync กับเพื่อนคนอื่นที่อาจแก้ไขนัด/คำขอ (โหมด Firebase/localStorage เช็คทุก 8 วิ)
+
+const sharedNoteEl = document.getElementById('sharedNote');
+if(sharedNoteEl){
+  if(storageMode === 'claude'){
+    sharedNoteEl.textContent = 'ทุกคนดูนัดนี้ได้ · แก้ไขได้เฉพาะแอดมิน';
+  }else if(storageMode === 'firebase'){
+    sharedNoteEl.textContent = 'ทุกคนดูนัดนี้ได้ (ซิงก์ผ่าน Firebase) · แก้ไขได้เฉพาะแอดมิน';
+  }else{
+    sharedNoteEl.textContent = 'โหมดออฟไลน์: เก็บนัดไว้ในเบราว์เซอร์นี้เครื่องเดียว ไม่ซิงก์กับเพื่อน';
+  }
+}
+</script>
+
+</body>
+</html>
